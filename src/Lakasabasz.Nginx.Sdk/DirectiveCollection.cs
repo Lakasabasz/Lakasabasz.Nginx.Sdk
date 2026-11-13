@@ -5,7 +5,7 @@ using Lakasabasz.Nginx.Sdk.Internal;
 namespace Lakasabasz.Nginx.Sdk;
 
 /// <summary>
-/// The directives of a file or of a block, in order: the generic way to read and change any directive (form D).
+/// The directives of a file or of a block, in order: the generic way to read and change any directive by its name and arguments.
 /// </summary>
 /// <remarks>
 /// <para>Changes keep the rest of the file as it was; only the changed directive's own text is written anew:</para>

@@ -19,7 +19,7 @@ public sealed class NginxFile
     /// <summary>Full path of the file.</summary>
     public string Path { get; }
 
-    /// <summary>The top-level directives of the file (form D: <c>Add</c>, <c>Set</c>, <c>Remove</c>, <c>AddBlock</c>).</summary>
+    /// <summary>The top-level directives of the file, read and changed by name: <c>Add</c>, <c>Set</c>, <c>Remove</c>, <c>AddBlock</c>.</summary>
     public DirectiveCollection Directives { get; }
 
     /// <summary>

@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Lakasabasz.Nginx.Sdk/Lakasabasz.Nginx.Sdk.csproj" />
+  </Folder>
+  <Folder Name="/examples/">
+    <Project Path="examples/Examples.GenericDirectives/Examples.GenericDirectives.csproj" />
+    <Project Path="examples/Examples.ReadConfig/Examples.ReadConfig.csproj" />
+    <Project Path="examples/Examples.ServerInfo/Examples.ServerInfo.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Lakasabasz.Nginx.Sdk.Tests/Lakasabasz.Nginx.Sdk.Tests.csproj" />
+  </Folder>
+</Solution>
