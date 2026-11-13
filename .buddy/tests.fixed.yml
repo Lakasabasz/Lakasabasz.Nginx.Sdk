@@ -1,0 +1,50 @@
+# Builds and tests the solution on every branch, inside the test image (tests/environment).
+# When tests/environment changed, the Test image pipeline builds the image for this revision first.
+- pipeline: tests
+  name: Tests
+  refs:
+  - refs/heads/*
+  events:
+  - type: PUSH
+    refs:
+    - refs/heads/*
+  # Token of the Buddy unit test suite nginx-sdk-tests; enables the test result sink (Infrastructure/Reporting)
+  variables:
+  - key: BUDDY_UT_TOKEN
+    value: '!encrypted CESAXMc1Fwu69VCWclkVcYH3oHm8PizZ2S7KpvWbkCw2B85DP4AsnEwrElEYXMcm.XHDWX24ECQ5i2v4VeD2T0w=='
+    encrypted: true
+    note: Token of the nginx-sdk-tests unit test suite
+  actions:
+  - action: Compute image tag
+    type: BUILD
+    commands: echo "TEST_IMAGE_TAG=$(sh ci/test-image-tag.sh)" >> "$BUDDY_VAR"
+    shell: SH
+    docker_image_name: library/alpine
+    docker_image_tag: "3.22"
+  - action: Build test image
+    type: RUN_NEXT_PIPELINE
+    pipeline: test-image
+    revision: INHERIT
+    wait: true
+    comment: Test image for $BUDDY_RUN_BRANCH ($TEST_IMAGE_TAG)
+    trigger_conditions:
+    - trigger_condition: ON_CHANGE_AT_PATH
+      trigger_condition_paths:
+      - tests/environment/
+      - ci/test-image-tag.sh
+  - action: dotnet test
+    type: BUILD
+    # Fails with a missing image when the Test image pipeline did not build this tag: run it by hand
+    image_location: ARTIFACT_REGISTRY
+    artifact: nginx-sdk-test-image
+    version: $TEST_IMAGE_TAG
+    # Builds as root, runs the tests as the image's unprivileged user tester
+    commands: sh ci/run-tests.sh
+    cached_dirs:
+    - /var/cache/nuget-packages
+    shell: BASH
+    variables:
+    - key: DOTNET_CLI_TELEMETRY_OPTOUT
+      value: "1"
+    - key: DOTNET_NOLOGO
+      value: "1"

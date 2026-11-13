@@ -1,0 +1,6 @@
+.bdy/
+bin/
+obj/
+.idea/
+*.user
+TestResults/

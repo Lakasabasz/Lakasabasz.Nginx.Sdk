@@ -1,0 +1,27 @@
+- pipeline: mirror-do-gh
+  name: Mirror do GH
+  refs:
+  - refs/heads/*
+  fail_on_prepare_env_warning: true
+  events:
+  - type: PUSH
+    refs:
+    - refs/heads/*
+    - refs/tags/*
+  targets:
+  - target: github
+    type: GIT
+    name: Github
+    repository: git@github.com:Lakasabasz/Lakasabasz.Nginx.Sdk.git
+    auth:
+      method: ASSETS_KEY
+      asset: id_project
+  actions:
+  - action: Git Push
+    type: PUSH
+    push_tags: true
+    target_branch: $BUDDY_RUN_BRANCH
+    without_force: false
+    comment: $BUDDY_RUN_COMMIT_MESSAGE
+    targets:
+    - github

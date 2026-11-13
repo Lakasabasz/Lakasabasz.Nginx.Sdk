@@ -1,0 +1,5 @@
+# Installed as /etc/sudoers.d/nginx-sdk-tests. The tests run as tester (ci/run-tests.sh), like an application
+# using the package: nginx itself needs root, so the package runs it through sudo -n (NginxEnvironment.Sudo).
+tester ALL=(root) NOPASSWD: /usr/sbin/nginx, /opt/nginx\ with\ spaces/nginx
+# NginxRegistry restores the baseline config after every test that changed it
+tester ALL=(root) NOPASSWD: /usr/bin/rm -rf /etc/nginx, /usr/bin/cp -a /tmp/tests.bak /etc/nginx

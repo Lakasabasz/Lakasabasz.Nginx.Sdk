@@ -1,0 +1,23 @@
+# Builds the test image (tests/environment) and pushes it to the nginx-sdk-test-image artifact,
+# tagged with a hash of tests/environment (ci/test-image-tag.sh). No push event: the Tests pipeline
+# triggers it when tests/environment changes; run it by hand if an image tag is missing.
+- pipeline: test-image
+  name: Test image
+  refs:
+  - refs/heads/*
+  actions:
+  - action: Compute image tag
+    type: BUILD
+    commands: echo "TEST_IMAGE_TAG=$(sh ci/test-image-tag.sh)" >> "$BUDDY_VAR"
+    shell: SH
+    docker_image_name: library/alpine
+    docker_image_tag: "3.22"
+  - action: Build and push test image
+    type: DOCKERFILE
+    dockerfile_path: tests/environment/Dockerfile
+    context_path: tests/environment
+    # Pushing to Buddy's artifact registry: the tag goes in versions, docker_image_tag is ignored
+    docker_registry: ARTIFACT_REGISTRY
+    artifact: nginx-sdk-test-image
+    versions:
+    - $TEST_IMAGE_TAG
