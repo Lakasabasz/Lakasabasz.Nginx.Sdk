@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0;net11.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <EnableNUnitRunner>true</EnableNUnitRunner>
+    <NoWarn>$(NoWarn);CA1861</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit3TestAdapter" />
+    <PackageReference Include="NUnit.Analyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Lakasabasz.Nginx.Sdk\Lakasabasz.Nginx.Sdk.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+    <Using Include="Lakasabasz.Nginx.Sdk.Tests.Infrastructure" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <TestingPlatformBuilderHook Include="3F1C2B7E-5D4A-4E8B-9C6F-0A2D8E1B4C57">
+      <DisplayName>Buddy unit test reporting</DisplayName>
+      <TypeFullName>Lakasabasz.Nginx.Sdk.Tests.Infrastructure.Reporting.BuddyReportingExtension</TypeFullName>
+    </TestingPlatformBuilderHook>
+    <TestingPlatformBuilderHook Include="9B6E2D41-7C3A-4F58-A1E0-5D8C2B7F3E96">
+      <DisplayName>Skipped tests guard</DisplayName>
+      <TypeFullName>Lakasabasz.Nginx.Sdk.Tests.Infrastructure.SkippedTestsGuard</TypeFullName>
+    </TestingPlatformBuilderHook>
+  </ItemGroup>
+
+</Project>

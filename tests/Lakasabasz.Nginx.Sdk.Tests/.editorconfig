@@ -1,0 +1,5 @@
+[**/_template.cs]
+dotnet_diagnostic.CA1707.severity = none
+
+[*.cs]
+dotnet_diagnostic.NUnit2045.severity = error
