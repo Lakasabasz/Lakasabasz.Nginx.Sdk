@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0: usable from every .NET (incl. .NET Framework and Mono); PolySharp supplies
+         the compiler types modern C# needs there (records, init, nullable attributes) -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Lakasabasz.Nginx.Sdk</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <IsPackable>true</IsPackable>
+    <PackageId>Lakasabasz.Nginx.Sdk</PackageId>
+    <Authors>Lakasabasz</Authors>
+    <Description>Parse, modify and serialize nginx configuration files from C#, then test and reload nginx.</Description>
+    <PackageTags>nginx;configuration;parser;serializer</PackageTags>
+    <RepositoryUrl>https://github.com/Lakasabasz/Lakasabasz.Nginx.Sdk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Lakasabasz/Lakasabasz.Nginx.Sdk</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Copyright (c) 2026 Łukasz Mastalerz</Copyright>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PolySharp" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
