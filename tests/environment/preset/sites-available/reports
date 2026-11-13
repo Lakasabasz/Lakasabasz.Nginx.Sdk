@@ -1,0 +1,20 @@
+# Preset for Lakasabasz.Nginx.Sdk tests (enabled)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name reports.example.test;
+
+    location /health {
+        default_type text/plain;
+        return 200 "reports\n";
+    }
+
+    location /api {
+        include snippets/proxy-headers.conf;
+        proxy_pass http://reports_backend;
+    }
+
+    location / {
+        root /var/www/reports;
+    }
+}

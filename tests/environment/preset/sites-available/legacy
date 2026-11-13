@@ -1,0 +1,9 @@
+# Preset for Lakasabasz.Nginx.Sdk tests (available, not enabled)
+server {
+    listen 80;
+    server_name legacy.example.test;
+
+    location / {
+        return 410;
+    }
+}
