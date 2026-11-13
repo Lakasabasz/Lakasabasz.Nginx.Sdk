@@ -2,7 +2,7 @@ namespace Lakasabasz.Nginx.Sdk.Tests.Infrastructure;
 
 public static class NginxHttp
 {
-    private static readonly HttpClient Client = new();
+    private static readonly HttpClient Client = new() { DefaultRequestHeaders = { ConnectionClose = true } };
 
     public static async Task<string> GetHealthAsync(CancellationToken cancellationToken)
     {

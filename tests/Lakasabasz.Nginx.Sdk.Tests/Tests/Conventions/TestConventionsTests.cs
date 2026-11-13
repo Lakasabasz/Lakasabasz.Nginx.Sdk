@@ -6,6 +6,17 @@ public sealed class TestConventionsTests : TestTemplate
 {
     private static readonly Type[] Types = typeof(TestConventionsTests).Assembly.GetTypes();
 
+    #region Helpers
+
+    private static bool HasTests(Type type) => type
+        .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+        .Any(IsTest);
+
+    private static bool IsTest(MethodInfo method) =>
+        method.IsDefined(typeof(TestAttribute)) || method.IsDefined(typeof(TestCaseAttribute)) || method.IsDefined(typeof(TestCaseSourceAttribute));
+
+    #endregion
+
     [Test]
     [Description("Every test class derives from TestTemplate directly or through the _template of its own folder.")]
     public void AllUseTemplate()
@@ -40,11 +51,4 @@ public sealed class TestConventionsTests : TestTemplate
 
         Assert.That(undescribed, Is.Empty, "Tests without a [Description]");
     }
-
-    private static bool HasTests(Type type) => type
-        .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Any(IsTest);
-
-    private static bool IsTest(MethodInfo method) =>
-        method.IsDefined(typeof(TestAttribute)) || method.IsDefined(typeof(TestCaseAttribute)) || method.IsDefined(typeof(TestCaseSourceAttribute));
 }
