@@ -63,6 +63,57 @@ public static class Consts
         public const string ReloadedHealthReturn = "\"reloaded by the package\\n\"";
     }
 
+    public static class Files
+    {
+        public const string DumpOption = "-T";
+        public const string DumpedFilePrefix = "# configuration file ";
+        public const string DumpedFileSuffix = ":";
+        public const char NewLine = '\n';
+
+        public const string MainPath = "/etc/nginx/nginx.conf";
+        public const string SitesAvailablePath = "/etc/nginx/sites-available";
+        public const string DefaultSite = "default";
+        public const string LegacySite = "legacy";
+        public const string ReportsSite = "reports";
+        public const string NewSite = "shop";
+        public const string MissingSite = "missing";
+        public const string ReportsLink = "sites-enabled/reports";
+        public const string LegacyLinkPath = "/etc/nginx/sites-enabled/legacy";
+        public const string ReportsRelativePath = "sites-available/reports";
+        public const string LegacyRelativePath = "sites-available/legacy";
+        public const string Upstreams = "upstreams.conf";
+        public const string ProxyHeaders = "proxy-headers.conf";
+        public const string OfficialDefault = "default.conf";
+        public const string NotAFileName = "conf.d/upstreams.conf";
+
+        public const string AllConfFiles = "*.conf";
+        public const string ConfigDirectoryFiles = "conf.d/*";
+        public const string SitesAvailableFiles = "sites-available/*";
+        public const string SitesEnabledFiles = "sites-enabled/*";
+        public const string ConfExtension = ".conf";
+
+        public const string Server = "server";
+        public const string Listen = "listen";
+        public const string ShopPort = "8097";
+        public const string ShopContent = "server {\n    listen 8097;\n}\n";
+
+        public const string OfficialCopy = "official";
+        public const string OfficialMain = "nginx.conf";
+        public const string AbsoluteConfigRoot = "/etc/nginx/";
+        public const string OfficialUser = "user  nginx;";
+        public const string ImageUser = "user  www-data;";
+
+        public const string OrphanName = "orphan";
+        public const string OrphanSite = "sites-available/orphan";
+        public const string OrphanContent = "server {\n    listen 8096;\n    include snippets/missing.conf;\n}\n";
+        public const string BrokenSite = "sites-available/broken";
+        public const string BrokenSiteContent = "server {\n    listen 8095;\n";
+        public const string BrokenSnippet = "snippets/broken.conf";
+        public const string BrokenSnippetContent = "proxy_set_header Host $host\n";
+        public const string PlainEnabledSite = "sites-enabled/plain";
+        public const string PlainEnabledContent = "server {\n    listen 8094;\n}\n";
+    }
+
     public static class Fixtures
     {
         public const string Root = "Fixtures";

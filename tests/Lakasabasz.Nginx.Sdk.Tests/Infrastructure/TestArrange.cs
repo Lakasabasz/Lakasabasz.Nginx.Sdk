@@ -59,6 +59,32 @@ public sealed class TestArrange(string configRoot, Func<string> workDirectory)
         return target;
     }
 
+    public string ConfDOnlyLayout()
+    {
+        var root = Path.Combine(workDirectory(), Consts.Files.OfficialCopy);
+        foreach (var file in NginxCorpus.Files(Consts.Paths.OfficialCorpus))
+        {
+            var target = Path.Combine(root, Path.GetRelativePath(Consts.Paths.OfficialCorpus, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target);
+        }
+        var main = Path.Combine(root, Consts.Files.OfficialMain);
+        File.WriteAllText(main, File.ReadAllText(main)
+            .Replace(Consts.Files.AbsoluteConfigRoot, string.Empty, StringComparison.Ordinal)
+            .Replace(Consts.Files.OfficialUser, Consts.Files.ImageUser, StringComparison.Ordinal));
+        return root;
+    }
+
+    public string DisabledSiteWithMissingInclude() => WriteConfig(Consts.Files.OrphanSite, Consts.Files.OrphanContent);
+
+    public IReadOnlyList<string> BrokenSiteAndSnippet() =>
+    [
+        WriteConfig(Consts.Files.BrokenSite, Consts.Files.BrokenSiteContent),
+        WriteConfig(Consts.Files.BrokenSnippet, Consts.Files.BrokenSnippetContent),
+    ];
+
+    public string PlainEnabledSite() => WriteConfig(Consts.Files.PlainEnabledSite, Consts.Files.PlainEnabledContent);
+
     private string Copy(string fixture)
     {
         var target = Path.Combine(workDirectory(), Path.GetFileName(fixture));
