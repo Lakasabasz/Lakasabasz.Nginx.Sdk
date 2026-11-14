@@ -4,48 +4,51 @@ namespace Lakasabasz.Nginx.Sdk.Internal;
 
 /// <summary>
 /// Loads config files and, optionally, the files their <c>include</c> directives name. Every file is parsed before
-/// any error is reported, so one <see cref="NginxParseException"/> lists every broken file.
+/// any error is reported, so one <see cref="NginxParseException"/> lists every broken file. A file is identified by
+/// its real path: one reached through a link (an enabled site) is loaded once, as its target.
 /// </summary>
 internal static class ConfigLoader
 {
     private const string Include = "include";
+    private const string ConfFiles = "*.conf";
 
     /// <param name="path">The file to load; relative to <paramref name="configRoot"/> unless absolute.</param>
     /// <param name="configRoot">The directory relative include paths start from (nginx's conf directory).</param>
     /// <param name="followIncludes">Also load the files included, at any depth; each file once.</param>
-    public static IReadOnlyList<NginxFile> Load(string path, string configRoot, bool followIncludes)
+    public static IReadOnlyList<NginxFile> Load(string path, string configRoot, bool followIncludes) =>
+        Run(configRoot, Rooted(path, configRoot), followIncludes, []);
+
+    /// <summary>
+    /// Every config file of an installation: the main file with everything it includes (what nginx loads), then the
+    /// files of <c>sites-available</c> (enabled or not), and the <c>*.conf</c> files of <c>conf.d</c> and
+    /// <c>snippets</c>. Includes are followed only from the main file, as nginx does: a disabled site is loaded
+    /// as it is.
+    /// </summary>
+    public static IReadOnlyList<NginxFile> Discover(string configRoot) => Run(
+        configRoot,
+        Rooted(ConfigWorkspace.MainFile, configRoot),
+        followIncludes: true,
+        Files(configRoot, ConfigWorkspace.SitesAvailable, null)
+            .Concat(Files(configRoot, ConfigWorkspace.ConfigDirectory, ConfFiles))
+            .Concat(Files(configRoot, ConfigWorkspace.Snippets, ConfFiles))
+            .ToList());
+
+    private static List<NginxFile> Run(string configRoot, string main, bool followIncludes, IReadOnlyList<string> others)
     {
         var files = new List<NginxFile>();
         var errors = new List<NginxParseError>();
         var loaded = new HashSet<string>(StringComparer.Ordinal);
-        var pending = new Queue<(string Path, NginxParseError? MissingError)>();
-        pending.Enqueue((Resolve(path, configRoot), null));
 
+        var pending = new Queue<(string Path, NginxParseError? MissingError)>();
+        pending.Enqueue((main, null));
         while (pending.Count > 0)
         {
-            var (file, missing) = pending.Dequeue();
-            if (!loaded.Add(file))
+            var (path, missing) = pending.Dequeue();
+            if (LoadOne(path, missing, files, errors, loaded) is not { } directives || !followIncludes)
                 continue;
-            if (!File.Exists(file))
+            foreach (var include in Includes(directives))
             {
-                errors.Add(missing ?? new NginxParseError(file, 0, 0, NotFound(file)));
-                continue;
-            }
-
-            var source = ConfigSource.Read(file);
-            var (directives, error) = ConfigParser.Parse(file, source.Text);
-            if (error is not null)
-            {
-                errors.Add(error);
-                continue;
-            }
-
-            files.Add(new NginxFile(file, source, directives!));
-            if (!followIncludes)
-                continue;
-            foreach (var include in Includes(directives!))
-            {
-                var target = Resolve(include.Arguments[0], configRoot);
+                var target = Rooted(include.Arguments[0], configRoot);
                 if (HasWildcards(target))
                 {
                     foreach (var match in Glob(target))
@@ -53,20 +56,60 @@ internal static class ConfigLoader
                 }
                 else
                 {
-                    pending.Enqueue((target, new NginxParseError(file, include.Line, include.Column, NotFound(target))));
+                    pending.Enqueue((target, new NginxParseError(path, include.Line, include.Column, NotFound(target))));
                 }
             }
         }
+
+        foreach (var other in others)
+            LoadOne(other, null, files, errors, loaded);
 
         if (errors.Count > 0)
             throw new NginxParseException(errors);
         return files;
     }
 
+    /// <returns>The directives of the file when it was loaded now; null when loaded before, missing or broken.</returns>
+    private static DirectiveCollection? LoadOne(string path, NginxParseError? missing, List<NginxFile> files,
+        List<NginxParseError> errors, HashSet<string> loaded)
+    {
+        if (!File.Exists(path))
+        {
+            if (loaded.Add(path))
+                errors.Add(missing ?? new NginxParseError(path, 0, 0, NotFound(path)));
+            return null;
+        }
+
+        var realPath = RealPath.Of(path);
+        if (!loaded.Add(realPath))
+            return null;
+
+        var source = ConfigSource.Read(realPath);
+        var (directives, error) = ConfigParser.Parse(realPath, source.Text);
+        if (error is not null)
+        {
+            errors.Add(error);
+            return null;
+        }
+
+        files.Add(new NginxFile(realPath, source, directives!));
+        return directives;
+    }
+
+    private static IEnumerable<string> Files(string configRoot, string directory, string? pattern)
+    {
+        var path = Path.Combine(configRoot, directory);
+        if (!Directory.Exists(path))
+            return [];
+        return Directory.EnumerateFiles(path, pattern ?? "*")
+            .Where(file => !Path.GetFileName(file).StartsWith(".", StringComparison.Ordinal))
+            .OrderBy(file => file, StringComparer.Ordinal);
+    }
+
     private static IEnumerable<Directive> Includes(DirectiveCollection directives) => directives.SelectMany(directive =>
         directive.Name == Include && directive.Arguments.Count == 1 ? [directive] : Includes(directive.Directives));
 
-    private static string Resolve(string path, string configRoot) =>
+    private static string Rooted(string path, string configRoot) =>
         Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(configRoot, path));
 
     private static string NotFound(string path) => $"open() \"{path}\" failed (2: No such file or directory)";

@@ -11,6 +11,9 @@ internal sealed record ConfigSource(string Text, Encoding Encoding, bool ByteOrd
     private static readonly byte[] Utf8Bom = [0xEF, 0xBB, 0xBF];
     private static readonly Encoding StrictUtf8 = new UTF8Encoding(false, throwOnInvalidBytes: true);
 
+    /// <summary>A new, empty file: UTF-8 without a byte order mark.</summary>
+    public static ConfigSource Empty { get; } = new(string.Empty, StrictUtf8, false);
+
     /// <summary>
     /// Reads a file: UTF-8 when its bytes are valid UTF-8 (with or without a byte order mark), otherwise Latin-1,
     /// which maps every byte to one character and back.

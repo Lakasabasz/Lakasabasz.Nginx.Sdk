@@ -133,7 +133,9 @@ public sealed class DirectiveCollection : IReadOnlyList<Directive>
         if (Owner is null && last < 0)
         {
             // A file without directives: append, on a line of its own, and end the file with a line break
-            var separator = _items.Count > 0 && !EndsWithNewline(_items[_items.Count - 1]) ? Formatting.Newline : string.Empty;
+            var separator = _items.Count > 0 && _items[_items.Count - 1] is string { Length: > 0 } && !EndsWithNewline(_items[_items.Count - 1])
+                ? Formatting.Newline
+                : string.Empty;
             _items.Add(separator);
             _items.Add(directive);
             _items.Add(Formatting.Newline);

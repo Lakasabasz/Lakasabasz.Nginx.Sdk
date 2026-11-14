@@ -16,7 +16,13 @@ public sealed class NginxFile
         Directives = directives;
     }
 
-    /// <summary>Full path of the file.</summary>
+    internal static NginxFile Empty(string path) =>
+        new(path, ConfigSource.Empty, ConfigParser.Parse(path, ConfigSource.Empty.Text).Directives!);
+
+    /// <summary>
+    /// Full path of the file, with links resolved: a site loaded through its link in <c>sites-enabled</c> has the path
+    /// of its file in <c>sites-available</c>.
+    /// </summary>
     public string Path { get; }
 
     /// <summary>The top-level directives of the file, read and changed by name: <c>Add</c>, <c>Set</c>, <c>Remove</c>, <c>AddBlock</c>.</summary>
