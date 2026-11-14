@@ -55,7 +55,7 @@ profiles), generic directives for anything outside the official nginx directive 
 | Lossless parser and serializer: comments and formatting of unchanged parts kept, Lua blocks kept as text | works |
 | `Nginx.Load(path, followIncludes)`, `nginx.Config.All`; `NginxParseException` listing every broken file | works |
 | Generic directives: `Directives.Add/Set/Remove/AddBlock` on files and blocks | works |
-| `Nginx.Discover`, `nginx.Config` directories, `SitesEnabled` | planned |
+| `Nginx.Discover`; `nginx.Config`: `Main`, `Default`, `SitesAvailable`, `ConfigDirectory`, `Snippets`, path indexer, `Load`, `Find`; `Create`/`TryGet`/`Delete` of files; `nginx.SitesEnabled` (changes kept in memory until committing exists) | works |
 | Sections and typed directives: fluent API, properties, lambdas, reusable objects, plain nginx text | planned |
 | Committing changes (`GetChanges`, `Test`, `Apply`, `CommitChanges`) | planned |
 
@@ -69,7 +69,9 @@ foreach (var error in result.Errors)
 
 nginx.Server.Reload();                          // nginx -s reload
 
-var site = Nginx.Load("sites-available/reports").Config.All.Single();
+var config = Nginx.Discover(sudo: true);         // nginx.conf with its includes, every site, conf.d, snippets
+var site = config.Config.SitesAvailable["reports"];
+config.SitesEnabled.Add(site);                  // on/off only, the content is the file
 var server = site.Directives.Single(d => d.Name == "server");
 server.Directives.Set("client_max_body_size", "50m");       // only this line changes
 server.Directives.AddBlock("location", "/api").Directives.Add("proxy_pass", "http://127.0.0.1:5000");
