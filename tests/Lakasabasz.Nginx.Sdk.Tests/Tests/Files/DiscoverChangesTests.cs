@@ -30,6 +30,22 @@ public sealed class DiscoverChangesTests : TestTemplate
     }
 
     [Test]
+    [Description("A link in sites-enabled to a missing site fails Nginx.Discover() as it fails nginx -t, while Nginx.Init() still works.")]
+    public void ReportsDanglingLinks()
+    {
+        var ghost = Arrange.DanglingEnabledSite();
+
+        var exception = Assert.Throws<NginxParseException>(() => Nginx.Discover(), "Discover should fail on the link to a missing site");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exception.Errors.Select(error => error.Message), Has.One.Contains(ghost), "The error should name the dangling link");
+            Assert.That(Nginx.Init(sudo: true).Server.Test().Success, Is.False, "nginx -t should fail on the dangling link too");
+            Assert.That(() => Nginx.Init(), Throws.Nothing, "Nginx.Init() should not fail on the dangling link");
+        });
+    }
+
+    [Test]
     [Description("A regular file in sites-enabled is an enabled site that SitesEnabled.Remove() refuses: there is no link to remove.")]
     public void KeepsPlainEnabledFiles()
     {

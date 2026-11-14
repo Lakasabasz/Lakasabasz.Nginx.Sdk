@@ -83,6 +83,13 @@ public sealed class TestArrange(string configRoot, Func<string> workDirectory)
         WriteConfig(Consts.Files.BrokenSnippet, Consts.Files.BrokenSnippetContent),
     ];
 
+    public string DanglingEnabledSite()
+    {
+        var link = ConfigPath(Consts.Files.GhostLink);
+        File.CreateSymbolicLink(link, ConfigPath(Consts.Files.GhostTarget));
+        return link;
+    }
+
     public string PlainEnabledSite() => WriteConfig(Consts.Files.PlainEnabledSite, Consts.Files.PlainEnabledContent);
 
     private string Copy(string fixture)

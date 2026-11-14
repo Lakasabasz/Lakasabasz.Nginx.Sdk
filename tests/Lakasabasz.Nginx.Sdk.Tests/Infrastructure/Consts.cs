@@ -110,6 +110,8 @@ public static class Consts
         public const string BrokenSiteContent = "server {\n    listen 8095;\n";
         public const string BrokenSnippet = "snippets/broken.conf";
         public const string BrokenSnippetContent = "proxy_set_header Host $host\n";
+        public const string GhostLink = "sites-enabled/ghost";
+        public const string GhostTarget = "sites-available/ghost";
         public const string PlainEnabledSite = "sites-enabled/plain";
         public const string PlainEnabledContent = "server {\n    listen 8094;\n}\n";
     }
@@ -392,6 +394,7 @@ public static class Consts
         public const string ConstsFile = "Consts.cs";
         public const string Pattern = "*.cs";
         public const string AnyFile = "*";
+        public const string Dot = ".";
         public const string Obj = "obj";
         public const string Bin = "bin";
         public const char Quote = '"';

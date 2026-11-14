@@ -12,17 +12,26 @@ internal static class RealPath
     /// The absolute path with every link resolved; the absolute path as given when it does not exist or links cannot
     /// be resolved on this platform.
     /// </summary>
-    public static string Of(string path)
+    public static string Of(string path) => TryResolve(path, out var real) ? real : Path.GetFullPath(path);
+
+    /// <summary>
+    /// Whether the path leads to an existing file or directory, following every link; a link to a missing file (a
+    /// dangling link) does not. Where links cannot be resolved (no libc), whether the path exists.
+    /// </summary>
+    /// <param name="path">The path.</param>
+    /// <param name="realPath">The absolute path with every link resolved.</param>
+    public static bool TryResolve(string path, out string realPath)
     {
-        var full = Path.GetFullPath(path);
+        realPath = Path.GetFullPath(path);
         try
         {
-            var resolved = NativeMethods.RealPath(full, IntPtr.Zero);
+            var resolved = NativeMethods.RealPath(realPath, IntPtr.Zero);
             if (resolved == IntPtr.Zero)
-                return full;
+                return false;
             try
             {
-                return Marshal.PtrToStringAnsi(resolved) ?? full;
+                realPath = Marshal.PtrToStringAnsi(resolved) ?? realPath;
+                return true;
             }
             finally
             {
@@ -31,11 +40,11 @@ internal static class RealPath
         }
         catch (DllNotFoundException)
         {
-            return full;
+            return File.Exists(realPath) || Directory.Exists(realPath);
         }
         catch (EntryPointNotFoundException)
         {
-            return full;
+            return File.Exists(realPath) || Directory.Exists(realPath);
         }
     }
 

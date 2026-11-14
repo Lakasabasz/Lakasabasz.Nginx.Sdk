@@ -49,15 +49,9 @@ internal static class ConfigLoader
             foreach (var include in Includes(directives))
             {
                 var target = Rooted(include.Arguments[0], configRoot);
-                if (HasWildcards(target))
-                {
-                    foreach (var match in Glob(target))
-                        pending.Enqueue((match, null));
-                }
-                else
-                {
-                    pending.Enqueue((target, new NginxParseError(path, include.Line, include.Column, NotFound(target))));
-                }
+                var matches = HasWildcards(target) ? Glob(target) : [target];
+                foreach (var match in matches)
+                    pending.Enqueue((match, new NginxParseError(path, include.Line, include.Column, NotFound(match))));
             }
         }
 
@@ -73,14 +67,13 @@ internal static class ConfigLoader
     private static DirectiveCollection? LoadOne(string path, NginxParseError? missing, List<NginxFile> files,
         List<NginxParseError> errors, HashSet<string> loaded)
     {
-        if (!File.Exists(path))
+        if (!RealPath.TryResolve(path, out var realPath) || Directory.Exists(realPath))
         {
             if (loaded.Add(path))
                 errors.Add(missing ?? new NginxParseError(path, 0, 0, NotFound(path)));
             return null;
         }
 
-        var realPath = RealPath.Of(path);
         if (!loaded.Add(realPath))
             return null;
 
@@ -116,7 +109,10 @@ internal static class ConfigLoader
 
     private static bool HasWildcards(string path) => path.IndexOfAny(['*', '?', '[']) >= 0;
 
-    /// <summary>Files matching a glob pattern in any path component, sorted like glob(3) does.</summary>
+    /// <summary>
+    /// Files matching a glob pattern in any path component, sorted like glob(3) does. Links count as files, also
+    /// dangling ones (<see cref="File.Exists"/> is true for them), which nginx then fails to open.
+    /// </summary>
     private static List<string> Glob(string pattern)
     {
         var parts = pattern.Split(Path.DirectorySeparatorChar);
