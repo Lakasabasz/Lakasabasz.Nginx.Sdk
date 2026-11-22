@@ -10,11 +10,13 @@ public sealed record NginxEnvironment
     /// <summary>The environment; every path not given is the standard one.</summary>
     /// <param name="binary">nginx executable; <see cref="DefaultBinary"/> when not given.</param>
     /// <param name="configRoot">Directory of the main config; <see cref="DefaultConfigRoot"/> when not given.</param>
+    /// <param name="errorLog">Error log; <see cref="DefaultErrorLog"/> when not given.</param>
     /// <param name="sudo">Run nginx commands through <c>sudo -n</c>.</param>
-    public NginxEnvironment(NginxPath? binary = null, NginxPath? configRoot = null, bool sudo = false)
+    public NginxEnvironment(NginxPath? binary = null, NginxPath? configRoot = null, NginxPath? errorLog = null, bool sudo = false)
     {
         Binary = binary ?? DefaultBinary;
         ConfigRoot = configRoot ?? DefaultConfigRoot;
+        ErrorLog = errorLog ?? DefaultErrorLog;
         Sudo = sudo;
     }
 
@@ -24,11 +26,17 @@ public sealed record NginxEnvironment
     /// <summary><c>/etc/nginx</c></summary>
     public static NginxPath DefaultConfigRoot { get; } = "/etc/nginx";
 
+    /// <summary><c>/var/log/nginx/error.log</c></summary>
+    public static NginxPath DefaultErrorLog { get; } = "/var/log/nginx/error.log";
+
     /// <summary>nginx executable.</summary>
     public NginxPath Binary { get; init; }
 
     /// <summary>Directory of the main config.</summary>
     public NginxPath ConfigRoot { get; init; }
+
+    /// <summary>Error log.</summary>
+    public NginxPath ErrorLog { get; init; }
 
     /// <summary>Run nginx commands through <c>sudo -n</c>.</summary>
     public bool Sudo { get; init; }
