@@ -21,9 +21,14 @@ status=0
 runuser -u tester -- dotnet test --solution Lakasabasz.Nginx.Sdk.slnx -c Release --artifacts-path "$artifacts" --no-build \
     --results-directory "$artifacts/TestResults" "$@" || status=$?
 
-# The examples (examples/) must keep working: each runs as tester, like an application using the package
+# The examples (examples/) must keep working: each runs as tester, like an application using the package. An example
+# using API that is not implemented yet says <RunExample>false</RunExample>: it is built, not run.
 for project in examples/*/*.csproj; do
     name=$(basename "$project" .csproj)
+    if grep -q '<RunExample>false</RunExample>' "$project"; then
+        echo "Example $name: not run (uses API that is not implemented yet)"
+        continue
+    fi
     echo "Example $name"
     runuser -u tester -- dotnet "$artifacts/bin/$name/release/$name.dll" || status=1
 done
