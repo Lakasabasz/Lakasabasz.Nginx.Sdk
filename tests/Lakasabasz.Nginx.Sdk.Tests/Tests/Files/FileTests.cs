@@ -20,11 +20,11 @@ public sealed class FileTests : TestTemplate
 
         Assert.Multiple(() =>
         {
-            Assert.That(shop.Path, Is.EqualTo(Path.Combine(Consts.Files.SitesAvailablePath, Consts.Files.NewSite)), "The new site should be in sites-available");
+            Assert.That(shop.Path, Is.EqualTo(new NginxPath(Consts.Files.SitesAvailablePath).Append(Consts.Files.NewSite)), "The new site should be in sites-available");
             Assert.That(_nginx.Config.All, Does.Contain(shop), "The new site should be in Config.All");
             Assert.That(_nginx.Config.SitesAvailable[Consts.Files.NewSite], Is.SameAs(shop), "The indexer should return the new site");
             Assert.That(shop.Serialize(), Is.Empty, "The new site should be empty");
-            Assert.That(File.Exists(shop.Path), Is.False, "Create should not write the file");
+            Assert.That(File.Exists(shop.Path.ToString()), Is.False, "Create should not write the file");
         });
     }
 
@@ -102,7 +102,7 @@ public sealed class FileTests : TestTemplate
             Assert.That(_nginx.Config.All, Does.Not.Contain(reports), "The deleted site should leave Config.All");
             Assert.That(_nginx.Config.SitesAvailable.TryGet(Consts.Files.ReportsSite, out _), Is.False, "The deleted site should leave SitesAvailable");
             Assert.That(_nginx.SitesEnabled.Contains(reports), Is.False, "The deleted site should be disabled");
-            Assert.That(File.Exists(reports.Path), Is.True, "Delete should not remove the file from disk");
+            Assert.That(File.Exists(reports.Path.ToString()), Is.True, "Delete should not remove the file from disk");
         });
     }
 
@@ -132,6 +132,22 @@ public sealed class FileTests : TestTemplate
     }
 
     [Test]
+    [Description("NginxFile.Load() reads one file outside any Nginx as it is, and throws NginxParseException naming a missing file.")]
+    public void FileLoadReadsOneFile()
+    {
+        var main = NginxFile.Load(Consts.Files.MainPath);
+
+        var exception = Assert.Throws<NginxParseException>(() => NginxFile.Load(Consts.Files.MissingPath), "Loading a missing file should fail");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(main.Path, Is.EqualTo(new NginxPath(Consts.Files.MainPath)), "The file should have the given path");
+            Assert.That(main.Serialize(), Is.EqualTo(File.ReadAllText(Consts.Files.MainPath)), "The file should be read as it is");
+            Assert.That(exception.Errors.Select(error => error.File), Is.EqualTo<NginxPath[]>([Consts.Files.MissingPath]), "The error should name the missing file");
+        });
+    }
+
+    [Test]
     [Description("The Config indexer takes a path relative to the config root or an absolute one.")]
     public void IndexerTakesPaths()
     {
@@ -151,7 +167,7 @@ public sealed class FileTests : TestTemplate
         {
             Assert.That(_nginx.Config.Find(Consts.Files.Upstreams), Is.EqualTo(_nginx.Config.ConfigDirectory.ToList()), "The name should find conf.d/upstreams.conf");
             Assert.That(_nginx.Config.Find(Consts.Files.ConfigDirectoryFiles), Is.EquivalentTo(_nginx.Config.ConfigDirectory), "conf.d/* should find the files of conf.d");
-            Assert.That(_nginx.Config.Find(Consts.Files.AllConfFiles).Select(file => file.Path), Has.All.EndsWith(Consts.Files.ConfExtension),
+            Assert.That(_nginx.Config.Find(Consts.Files.AllConfFiles).Select(file => file.Path.Name), Has.All.EndsWith(Consts.Files.ConfExtension),
                 "*.conf should find only .conf files");
             Assert.That(_nginx.Config.Find(Consts.Files.AllConfFiles), Does.Contain(_nginx.Config.Main), "*.conf should find nginx.conf");
         });

@@ -1,9 +1,10 @@
 using System.Text;
 
-namespace Lakasabasz.Nginx.Sdk.Internal;
+namespace Lakasabasz.Nginx.Sdk.Internal.Syntax;
 
 /// <summary>
-/// Lossless parser of nginx config files: keeps every character, so an unchanged file is written back as it was.
+/// Lossless parser of nginx config files into a syntax tree, which keeps every character (lines, indentation,
+/// comments), so an unchanged file is written back as it was.
 /// Follows nginx's own tokenizer (ngx_conf_read_token): the same tokens, escapes and syntax errors.
 /// </summary>
 /// <remarks>
@@ -21,13 +22,13 @@ namespace Lakasabasz.Nginx.Sdk.Internal;
 /// </remarks>
 internal sealed class ConfigParser
 {
-    private readonly string _file;
+    private readonly NginxPath _file;
     private readonly string _text;
     private readonly int[] _lineStarts;
     private readonly Formatting _formatting;
     private int _position;
 
-    private ConfigParser(string file, string text)
+    private ConfigParser(NginxPath file, string text)
     {
         _file = file;
         _text = text;
@@ -41,35 +42,48 @@ internal sealed class ConfigParser
         _lineStarts = lineStarts.ToArray();
     }
 
-    /// <summary>The top-level directives of the file, or its syntax error.</summary>
-    public static (DirectiveCollection? Directives, NginxParseError? Error) Parse(string file, string text)
+    /// <summary>The syntax tree of the file, or its syntax error.</summary>
+    public static Result<SyntaxTree, NginxParseError> Parse(NginxPath file, string text)
     {
         var parser = new ConfigParser(file, text);
         try
         {
-            return (parser.ParseCollection(block: false), null);
+            return Result<SyntaxTree, NginxParseError>.Success(new SyntaxTree(parser.ParseLines(block: false), parser._formatting));
         }
         catch (SyntaxError error)
         {
             var (line, column) = parser.LineAndColumn(error.Position);
-            return (null, new NginxParseError(file, line, column, error.Message));
+            return Result<SyntaxTree, NginxParseError>.Failure(new NginxParseError(file, line, column, error.Message));
         }
     }
 
-    private DirectiveCollection ParseCollection(bool block)
+    /// <summary>
+    /// The lines of a file, or of a block up to its closing <c>}</c> (consumed).
+    /// </summary>
+    private SyntaxBlock ParseLines(bool block)
     {
-        var items = new List<object>();
+        var lines = new List<SyntaxLine>();
+        var line = new SyntaxLine { Indentation = ReadBlanks() };
         while (true)
         {
-            var triviaStart = _position;
-            SkipTrivia();
-            items.Add(_text.Substring(triviaStart, _position - triviaStart));
-
+            var spacing = ReadBlanks();
             if (_position >= _text.Length)
             {
                 if (block)
                     throw new SyntaxError(_position, "unexpected end of file, expecting \"}\"");
-                return new DirectiveCollection(items, _formatting);
+                line.Trailing = spacing;
+                lines.Add(line);
+                return FileOf(lines);
+            }
+
+            if (LineBreakLength() is var lineBreak and > 0)
+            {
+                line.Trailing = spacing;
+                line.Ending = _text.Substring(_position, lineBreak);
+                _position += lineBreak;
+                lines.Add(line);
+                line = new SyntaxLine { Indentation = ReadBlanks() };
+                continue;
             }
 
             switch (_text[_position])
@@ -78,19 +92,74 @@ internal sealed class ConfigParser
                     if (!block)
                         throw new SyntaxError(_position, "unexpected \"}\"");
                     _position++;
-                    return new DirectiveCollection(items, _formatting);
+                    line.Trailing = spacing;
+                    lines.Add(line);
+                    return BlockOf(lines);
                 case ';':
                     throw new SyntaxError(_position, "unexpected \";\"");
                 case '{':
                     throw new SyntaxError(_position, "unexpected \"{\"");
+                case '#':
+                    line.Items.Add(new SyntaxItem(spacing, ReadComment()));
+                    break;
                 default:
-                    items.Add(ParseDirective());
+                    line.Items.Add(new SyntaxItem(spacing, ParseDirective()));
                     break;
             }
         }
     }
 
-    private Directive ParseDirective()
+    /// <summary>The lines of a file; the empty rest after the last line break is not a line.</summary>
+    private static SyntaxBlock FileOf(List<SyntaxLine> lines)
+    {
+        if (lines[lines.Count - 1].IsEmpty)
+            lines.RemoveAt(lines.Count - 1);
+        var file = new SyntaxBlock();
+        file.Lines.AddRange(lines);
+        return file;
+    }
+
+    /// <summary>
+    /// The lines between the braces of a block: the spaces after <c>{</c> (with the line break, when nothing follows
+    /// on its line) and before <c>}</c> become the block's own settings, so only whole lines stay lines.
+    /// </summary>
+    private static SyntaxBlock BlockOf(List<SyntaxLine> lines)
+    {
+        var block = new SyntaxBlock();
+        var first = lines[0];
+        if (lines.Count == 1 && first.Items.Count == 0)
+        {
+            block.BeforeClosing = first.Indentation + first.Trailing;
+            return block;
+        }
+
+        if (first.Items.Count == 0)
+        {
+            block.AfterOpening = first.Indentation + first.Trailing + first.Ending;
+            lines.RemoveAt(0);
+        }
+        else
+        {
+            block.AfterOpening = first.Indentation;
+            first.Indentation = string.Empty;
+        }
+
+        var last = lines[lines.Count - 1];
+        if (last.Items.Count == 0)
+        {
+            block.BeforeClosing = last.Indentation + last.Trailing;
+            lines.RemoveAt(lines.Count - 1);
+        }
+        else
+        {
+            block.BeforeClosing = last.Trailing;
+            last.Trailing = string.Empty;
+        }
+        block.Lines.AddRange(lines);
+        return block;
+    }
+
+    private SyntaxDirective ParseDirective()
     {
         var start = _position;
         var (line, column) = LineAndColumn(start);
@@ -110,17 +179,17 @@ internal sealed class ConfigParser
                 var name = words[0];
                 var arguments = words.Skip(1).ToArray();
                 if (c == ';')
-                    return new Directive(name, arguments, DirectiveKind.Simple, header, line, column, null, null);
+                    return new SyntaxDirective(name, arguments, header, null, null, line, column);
                 if (IsRawBlock(name))
-                    return new Directive(name, arguments, DirectiveKind.Raw, header, line, column, null, ReadRawBody());
-                return new Directive(name, arguments, DirectiveKind.Block, header, line, column, ParseCollection(block: true), null);
+                    return new SyntaxDirective(name, arguments, header, null, ReadRawBody(), line, column);
+                return new SyntaxDirective(name, arguments, header, ParseLines(block: true), null, line, column);
             }
             if (c == '}')
                 throw new SyntaxError(_position, "unexpected \"}\"");
         }
     }
 
-    /// <summary>Whitespace and comments.</summary>
+    /// <summary>Whitespace and comments between the words of a directive.</summary>
     private void SkipTrivia()
     {
         while (_position < _text.Length)
@@ -140,6 +209,26 @@ internal sealed class ConfigParser
                 return;
             }
         }
+    }
+
+    /// <summary>Spaces and tabs (and a <c>\r</c> not starting a line break): the spacing on a line.</summary>
+    private string ReadBlanks()
+    {
+        var start = _position;
+        while (_position < _text.Length && (_text[_position] is ' ' or '\t' || _text[_position] == '\r' && LineBreakLength() == 0))
+            _position++;
+        return _text.Substring(start, _position - start);
+    }
+
+    /// <summary>The length of the line break at the position: 1 for <c>\n</c>, 2 for <c>\r\n</c>, 0 for none.</summary>
+    private int LineBreakLength() => Peek(0) == '\n' ? 1 : Peek(0) == '\r' && Peek(1) == '\n' ? 2 : 0;
+
+    private SyntaxComment ReadComment()
+    {
+        var start = _position;
+        while (_position < _text.Length && LineBreakLength() == 0)
+            _position++;
+        return new SyntaxComment(_text.Substring(start, _position - start));
     }
 
     private string ReadWord()

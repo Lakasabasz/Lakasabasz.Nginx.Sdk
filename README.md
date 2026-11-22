@@ -36,7 +36,7 @@ nginx.Config.SitesAvailable.Create("reports")
                 .ForwardHostHeader()
                 .ForwardClientIpHeaders()))
         .AddLocation("/", l => l.ServeFrom("/var/www/reports")));
-nginx.SitesEnabled.Add(nginx.Config.SitesAvailable["reports"]);
+nginx.SitesEnabled.Enable(nginx.Config.SitesAvailable["reports"]);
 
 nginx.CommitChanges();   // nginx -t on the changes, then save and reload; throws when nginx rejects them
 ```
@@ -50,35 +50,24 @@ profiles), generic directives for anything outside the official nginx directive 
 | Area | State |
 |---|---|
 | `Nginx.Init(sudo)`, `Nginx.Init(NginxEnvironment)` | works |
-| `nginx.Server`: `Environment`, `Version`, `Test()`, `Reload()` | works |
-| `NginxTestResult` with errors and warnings (file, line), `NginxCommandException` | works |
+| `nginx.Server.Environment` | works |
 | Lossless parser and serializer: comments and formatting of unchanged parts kept, Lua blocks kept as text | works |
 | `Nginx.Load(path, followIncludes)`, `nginx.Config.All`; `NginxParseException` listing every broken file | works |
 | Generic directives: `Directives.Add/Set/Remove/AddBlock` on files and blocks | works |
 | `Nginx.Discover`; `nginx.Config`: `Main`, `Default`, `SitesAvailable`, `ConfigDirectory`, `Snippets`, path indexer, `Load`, `Find`; `Create`/`TryGet`/`Delete` of files; `nginx.SitesEnabled` (changes kept in memory until committing exists) | works |
 | Sections and typed directives: fluent API, properties, lambdas, reusable objects, plain nginx text | planned |
-| Committing changes (`GetChanges`, `Test`, `Apply`, `CommitChanges`) | planned |
+| Committing changes (`GetChanges`, `Test`, `Apply`, `CommitChanges`); `nginx.Server`: `Version`, `Test()`, `Reload()` | planned |
 
 ```csharp
-var nginx = Nginx.Init(sudo: true);
-Console.WriteLine(nginx.Server.Version);         // e.g. 1.28.3
-
-var result = nginx.Server.Test();               // nginx -t, does not throw
-foreach (var error in result.Errors)
-    Console.WriteLine($"{error.File}:{error.Line} {error.Message}");
-
-nginx.Server.Reload();                          // nginx -s reload
-
 var config = Nginx.Discover(sudo: true);         // nginx.conf with its includes, every site, conf.d, snippets
 var site = config.Config.SitesAvailable["reports"];
-config.SitesEnabled.Add(site);                  // on/off only, the content is the file
+config.SitesEnabled.Enable(site);               // only the link in sites-enabled; the content is the file
 var server = site.Directives.Single(d => d.Name == "server");
 server.Directives.Set("client_max_body_size", "50m");       // only this line changes
 server.Directives.AddBlock("location", "/api").Directives.Add("proxy_pass", "http://127.0.0.1:5000");
 ```
 
-`NginxEnvironment` defaults to a standard Debian/Ubuntu installation (`/usr/sbin/nginx`, `/etc/nginx`,
-`/var/log/nginx/error.log`); give only what differs, e.g. `new NginxEnvironment(Binary: "/opt/nginx/sbin/nginx")`.
+`NginxEnvironment` defaults to a standard Debian/Ubuntu installation (`/usr/sbin/nginx`, `/etc/nginx`); give only what differs, e.g. `new NginxEnvironment(binary: "/opt/nginx/sbin/nginx")`.
 
 ## Requirements
 

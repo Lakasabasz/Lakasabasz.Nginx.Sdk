@@ -15,12 +15,12 @@ public static class NginxRegistry
         var unmet = new List<UnmetRequirement>();
         if (!File.Exists(Consts.Paths.Binary))
             unmet.Add(new(RegistryRequirement.NginxBinary, Consts.Messages.NoBinary(Consts.Paths.Binary)));
-        if (!Directory.Exists(Consts.Paths.ConfigRoot))
-            unmet.Add(new(RegistryRequirement.ConfigRoot, Consts.Messages.NoConfigRoot(Consts.Paths.ConfigRoot)));
-        else
+        await using (await LockAsync(Consts.Paths.InitLockFile, FileShare.None))
+        await using (await LockAsync(Consts.Paths.LockFile, FileShare.Read))
         {
-            await using var shared = await LockAsync(Consts.Paths.LockFile, FileShare.Read);
-            if (!IsWritable(Consts.Paths.ConfigRoot))
+            if (!Directory.Exists(Consts.Paths.ConfigRoot))
+                unmet.Add(new(RegistryRequirement.ConfigRoot, Consts.Messages.NoConfigRoot(Consts.Paths.ConfigRoot)));
+            else if (!IsWritable(Consts.Paths.ConfigRoot))
                 unmet.Add(new(RegistryRequirement.WritableConfigRoot, Consts.Messages.ConfigRootNotWritable(Consts.Paths.ConfigRoot)));
         }
         var sudo = await NginxProcess.RunAsync(Consts.Paths.Sudo, Consts.Arguments.NoPrompt, Consts.Paths.Binary, Consts.Arguments.Version);
@@ -71,6 +71,7 @@ public static class NginxRegistry
                 return;
 
             await using var processLock = await LockAsync(Consts.Paths.InitLockFile, FileShare.None);
+            await using var shared = await LockAsync(Consts.Paths.LockFile, FileShare.Read);
             if (!Directory.Exists(Consts.Paths.Backup))
                 await RunAsync(Consts.Paths.Cp, Consts.Arguments.Archive, Consts.Paths.ConfigRoot, Consts.Paths.Backup);
             if (!IsRunning())

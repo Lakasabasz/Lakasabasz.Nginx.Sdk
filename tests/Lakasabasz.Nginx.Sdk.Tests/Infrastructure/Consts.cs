@@ -45,6 +45,7 @@ public static class Consts
         public const string Signal = "-s";
         public const string Quit = "quit";
         public const string Stop = "stop";
+        public const string Reload = "reload";
         public const string RecursiveForce = "-rf";
         public const string Archive = "-a";
     }
@@ -71,6 +72,7 @@ public static class Consts
         public const char NewLine = '\n';
 
         public const string MainPath = "/etc/nginx/nginx.conf";
+        public const string MissingPath = "/etc/nginx/missing.conf";
         public const string SitesAvailablePath = "/etc/nginx/sites-available";
         public const string DefaultSite = "default";
         public const string LegacySite = "legacy";

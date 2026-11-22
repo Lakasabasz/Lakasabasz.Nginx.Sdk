@@ -11,9 +11,9 @@ namespace Lakasabasz.Nginx.Sdk;
 public sealed class NginxDirectory : IEnumerable<NginxFile>
 {
     private readonly ConfigWorkspace _workspace;
-    private readonly string _directory;
+    private readonly NginxPath _directory;
 
-    internal NginxDirectory(ConfigWorkspace workspace, string directory)
+    internal NginxDirectory(ConfigWorkspace workspace, NginxPath directory)
     {
         _workspace = workspace;
         _directory = directory;
@@ -32,7 +32,7 @@ public sealed class NginxDirectory : IEnumerable<NginxFile>
     /// <returns>Whether the file is loaded.</returns>
     public bool TryGet(string name, [NotNullWhen(true)] out NginxFile? file)
     {
-        file = _workspace.Get(PathOf(name));
+        file = _workspace.Get(PathOf(name)) is { } document ? Facades.Of(document) : null;
         return file is not null;
     }
 
@@ -42,7 +42,7 @@ public sealed class NginxDirectory : IEnumerable<NginxFile>
     /// </summary>
     /// <param name="name">The file name. Nothing is added to it: in <c>conf.d</c> give the <c>.conf</c> nginx includes.</param>
     /// <exception cref="InvalidOperationException">The file is loaded already or exists on disk.</exception>
-    public NginxFile Create(string name) => _workspace.Create(PathOf(name));
+    public NginxFile Create(string name) => Facades.Of(_workspace.Create(PathOf(name)));
 
     /// <summary>
     /// Deletes a loaded file: it leaves <c>Config.All</c>, and an enabled site is disabled too. It is removed from disk
@@ -50,17 +50,18 @@ public sealed class NginxDirectory : IEnumerable<NginxFile>
     /// </summary>
     /// <param name="name">The file name.</param>
     /// <exception cref="KeyNotFoundException">No such file is loaded.</exception>
-    public void Delete(string name) => _workspace.Delete(this[name]);
+    public void Delete(string name) => _workspace.Delete(_workspace.Get(PathOf(name))
+        ?? throw new KeyNotFoundException($"{_directory}/{name} is not loaded."));
 
     /// <inheritdoc />
-    public IEnumerator<NginxFile> GetEnumerator() => _workspace.In(_directory).GetEnumerator();
+    public IEnumerator<NginxFile> GetEnumerator() => _workspace.In(_directory).Select(Facades.Of).GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    private string PathOf(string name)
+    private NginxPath PathOf(string name)
     {
         if (string.IsNullOrEmpty(name) || name.IndexOf('/') >= 0 || name is "." or "..")
             throw new ArgumentException($"\"{name}\" is not a file name: give the name only, without a directory.", nameof(name));
-        return Path.Combine(_workspace.DirectoryPath(_directory), name);
+        return _workspace.Resolve(_directory).Append(name);
     }
 }

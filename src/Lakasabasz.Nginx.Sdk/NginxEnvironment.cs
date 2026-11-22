@@ -3,24 +3,33 @@ namespace Lakasabasz.Nginx.Sdk;
 /// <summary>
 /// Where the nginx installation lives and how its commands are run. Every value defaults to a standard
 /// Debian/Ubuntu installation, so only what differs needs to be given, e.g.
-/// <c>new NginxEnvironment(Binary: "/opt/nginx/sbin/nginx")</c>.
+/// <c>new NginxEnvironment(binary: "/opt/nginx/sbin/nginx")</c>.
 /// </summary>
-/// <param name="Binary">nginx executable.</param>
-/// <param name="ConfigRoot">Directory of the main config.</param>
-/// <param name="ErrorLog">Error log.</param>
-/// <param name="Sudo">Run nginx commands through <c>sudo -n</c>.</param>
-public sealed record NginxEnvironment(
-    string Binary = NginxEnvironment.DefaultBinary,
-    string ConfigRoot = NginxEnvironment.DefaultConfigRoot,
-    string ErrorLog = NginxEnvironment.DefaultErrorLog,
-    bool Sudo = false)
+public sealed record NginxEnvironment
 {
+    /// <summary>The environment; every path not given is the standard one.</summary>
+    /// <param name="binary">nginx executable; <see cref="DefaultBinary"/> when not given.</param>
+    /// <param name="configRoot">Directory of the main config; <see cref="DefaultConfigRoot"/> when not given.</param>
+    /// <param name="sudo">Run nginx commands through <c>sudo -n</c>.</param>
+    public NginxEnvironment(NginxPath? binary = null, NginxPath? configRoot = null, bool sudo = false)
+    {
+        Binary = binary ?? DefaultBinary;
+        ConfigRoot = configRoot ?? DefaultConfigRoot;
+        Sudo = sudo;
+    }
+
     /// <summary><c>/usr/sbin/nginx</c></summary>
-    public const string DefaultBinary = "/usr/sbin/nginx";
+    public static NginxPath DefaultBinary { get; } = "/usr/sbin/nginx";
 
     /// <summary><c>/etc/nginx</c></summary>
-    public const string DefaultConfigRoot = "/etc/nginx";
+    public static NginxPath DefaultConfigRoot { get; } = "/etc/nginx";
 
-    /// <summary><c>/var/log/nginx/error.log</c></summary>
-    public const string DefaultErrorLog = "/var/log/nginx/error.log";
+    /// <summary>nginx executable.</summary>
+    public NginxPath Binary { get; init; }
+
+    /// <summary>Directory of the main config.</summary>
+    public NginxPath ConfigRoot { get; init; }
+
+    /// <summary>Run nginx commands through <c>sudo -n</c>.</summary>
+    public bool Sudo { get; init; }
 }

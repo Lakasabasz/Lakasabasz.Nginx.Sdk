@@ -5,16 +5,17 @@ public sealed class DiscoverChangesTests : TestTemplate
 {
     [Test]
     [Description("A disabled site including a missing file does not fail Nginx.Discover(): includes are followed only from what nginx loads, and nginx -t passes.")]
-    public void SkipsIncludesOfDisabledSites()
+    public async Task SkipsIncludesOfDisabledSites()
     {
         Arrange.DisabledSiteWithMissingInclude();
 
         var nginx = Nginx.Discover(sudo: true);
+        var nginxTest = await NginxControl.TestAsync();
 
         Assert.Multiple(() =>
         {
             Assert.That(nginx.Config.SitesAvailable.TryGet(Consts.Files.OrphanName, out _), Is.True, "The disabled site should be loaded");
-            Assert.That(nginx.Server.Test().Success, Is.True, "nginx should accept the config, as the disabled site is not loaded by it");
+            Assert.That(nginxTest.Success, Is.True, "nginx should accept the config, as the disabled site is not loaded by it");
         });
     }
 
@@ -31,32 +32,35 @@ public sealed class DiscoverChangesTests : TestTemplate
 
     [Test]
     [Description("A link in sites-enabled to a missing site fails Nginx.Discover() as it fails nginx -t, while Nginx.Init() still works.")]
-    public void ReportsDanglingLinks()
+    public async Task ReportsDanglingLinks()
     {
         var ghost = Arrange.DanglingEnabledSite();
 
         var exception = Assert.Throws<NginxParseException>(() => Nginx.Discover(), "Discover should fail on the link to a missing site");
+        var nginxTest = await NginxControl.TestAsync();
 
         Assert.Multiple(() =>
         {
             Assert.That(exception.Errors.Select(error => error.Message), Has.One.Contains(ghost), "The error should name the dangling link");
-            Assert.That(Nginx.Init(sudo: true).Server.Test().Success, Is.False, "nginx -t should fail on the dangling link too");
+            Assert.That(nginxTest.Success, Is.False, "nginx -t should fail on the dangling link too");
             Assert.That(() => Nginx.Init(), Throws.Nothing, "Nginx.Init() should not fail on the dangling link");
         });
     }
 
     [Test]
-    [Description("A regular file in sites-enabled is an enabled site that SitesEnabled.Remove() refuses: there is no link to remove.")]
-    public void KeepsPlainEnabledFiles()
+    [Description("A regular file in sites-enabled is config, not a link: Nginx.Discover() loads it, SitesEnabled does not list it.")]
+    public void LeavesPlainEnabledFilesToConfig()
     {
         Arrange.PlainEnabledSite();
         var nginx = Nginx.Discover();
         var plain = nginx.Config[Consts.Files.PlainEnabledSite];
 
+        nginx.SitesEnabled.Disable(plain);
+
         Assert.Multiple(() =>
         {
-            Assert.That(nginx.SitesEnabled.Contains(plain), Is.True, "The file in sites-enabled should be enabled");
-            Assert.That(() => nginx.SitesEnabled.Remove(plain), Throws.InvalidOperationException, "Remove should refuse a file that is not a link");
+            Assert.That(nginx.Config.All, Does.Contain(plain), "The file in sites-enabled should stay loaded as config");
+            Assert.That(nginx.SitesEnabled, Does.Not.Contain(plain.Path), "SitesEnabled should list only links");
         });
     }
 }

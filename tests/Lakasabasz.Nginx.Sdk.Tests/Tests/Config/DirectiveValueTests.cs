@@ -11,7 +11,7 @@ public sealed class DirectiveValueTests : TestTemplate
     public async Task ServeValuesSiteAsync()
     {
         _valuesSite = Arrange.ValuesSite();
-        Nginx.Init(sudo: true).Server.Reload();
+        await NginxControl.ReloadAsync();
         await NginxHttp.EventuallyAsync(
             async () => await NginxHttp.TryGetAsync(Consts.Parsing.ValuesPort, Consts.Parsing.PlainLocation, Cancellation) is not null,
             "nginx should serve the values site after the reload",
@@ -52,7 +52,7 @@ public sealed class DirectiveValueTests : TestTemplate
             .Directives.Set(Consts.Parsing.Return, Consts.Parsing.TrickyStatusAndBody);
         await File.WriteAllTextAsync(_valuesSite, file.Serialize(), Cancellation);
 
-        Nginx.Init(sudo: true).Server.Reload();
+        await NginxControl.ReloadAsync();
 
         await NginxHttp.EventuallyAsync(
             async () => await NginxHttp.TryGetAsync(Consts.Parsing.ValuesPort, Consts.Parsing.PlainLocation, Cancellation) == Consts.Parsing.TrickyBody,

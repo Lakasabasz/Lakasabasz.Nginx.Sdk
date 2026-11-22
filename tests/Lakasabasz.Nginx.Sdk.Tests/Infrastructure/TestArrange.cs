@@ -77,7 +77,7 @@ public sealed class TestArrange(string configRoot, Func<string> workDirectory)
 
     public string DisabledSiteWithMissingInclude() => WriteConfig(Consts.Files.OrphanSite, Consts.Files.OrphanContent);
 
-    public IReadOnlyList<string> BrokenSiteAndSnippet() =>
+    public IReadOnlyList<NginxPath> BrokenSiteAndSnippet() =>
     [
         WriteConfig(Consts.Files.BrokenSite, Consts.Files.BrokenSiteContent),
         WriteConfig(Consts.Files.BrokenSnippet, Consts.Files.BrokenSnippetContent),

@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Lakasabasz.Nginx.Sdk.Internal;
+namespace Lakasabasz.Nginx.Sdk.Internal.Syntax;
 
 /// <summary>Line break and indentation unit of a file, used for the text of new directives.</summary>
 internal sealed record Formatting(string Newline, string IndentUnit)
@@ -19,12 +19,9 @@ internal sealed record Formatting(string Newline, string IndentUnit)
     }
 }
 
-/// <summary>Text of changed and new directives, and trimming around removed ones.</summary>
+/// <summary>Text of changed and new directives.</summary>
 internal static class ConfigWriter
 {
-    private static readonly Regex RestOfLine = new(@"^[ \t]*(#[^\n]*)?(\r?\n)?", RegexOptions.CultureInvariant);
-    private static readonly Regex TrailingComment = new(@"^[ \t]*(#[^\r\n]*)?", RegexOptions.CultureInvariant);
-
     /// <summary><c>name arg1 arg2</c>, plus a space before <c>{</c> for a block.</summary>
     public static void AppendHeader(StringBuilder output, string name, IReadOnlyList<string> arguments, bool block)
     {
@@ -52,24 +49,4 @@ internal static class ConfigWriter
         }
         return quoted.Append('"').ToString();
     }
-
-    /// <summary>
-    /// The text before a removed directive without the directive's indentation, and whether the directive started
-    /// its line (only spaces and tabs between the last line break and the directive).
-    /// </summary>
-    public static (string Kept, bool StartsLine) WithoutIndentation(string before)
-    {
-        var lineStart = before.LastIndexOf('\n');
-        var indentation = before.Substring(lineStart + 1);
-        return indentation.All(c => c is ' ' or '\t') && (lineStart >= 0 || before.Length == indentation.Length)
-            ? (before.Substring(0, lineStart + 1), true)
-            : (before, false);
-    }
-
-    /// <summary>
-    /// The text after a removed directive without the rest of its line: a comment on the same line and, when the
-    /// directive had the line to itself, the line break.
-    /// </summary>
-    public static string WithoutRestOfLine(string after, bool startsLine) =>
-        after.Substring((startsLine ? RestOfLine : TrailingComment).Match(after).Length);
 }

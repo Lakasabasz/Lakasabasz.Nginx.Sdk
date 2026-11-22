@@ -5,7 +5,7 @@ public sealed class DiscoverTests : TestTemplate
 {
     #region Helpers
 
-    private static IEnumerable<string> Names(IEnumerable<NginxFile> files) => files.Select(file => Path.GetFileName(file.Path));
+    private static IEnumerable<string> Names(IEnumerable<NginxFile> files) => files.Select(file => file.Path.Name);
 
     #endregion
 
@@ -42,8 +42,8 @@ public sealed class DiscoverTests : TestTemplate
 
         Assert.Multiple(() =>
         {
-            Assert.That(nginx.Config.Main.Path, Is.EqualTo(Consts.Files.MainPath), "Main should be nginx.conf of the config root");
-            Assert.That(nginx.Config.Default.Path, Is.EqualTo(Path.Combine(Consts.Files.SitesAvailablePath, Consts.Files.DefaultSite)),
+            Assert.That(nginx.Config.Main.Path, Is.EqualTo(new NginxPath(Consts.Files.MainPath)), "Main should be nginx.conf of the config root");
+            Assert.That(nginx.Config.Default.Path, Is.EqualTo(new NginxPath(Consts.Files.SitesAvailablePath).Append(Consts.Files.DefaultSite)),
                 "Default should be sites-available/default");
             Assert.That(Names(nginx.Config.ConfigDirectory), Is.EquivalentTo([Consts.Files.Upstreams]), "ConfigDirectory should hold the files of conf.d");
             Assert.That(Names(nginx.Config.Snippets), Does.Contain(Consts.Files.ProxyHeaders), "Snippets should hold the files of snippets");
@@ -58,7 +58,7 @@ public sealed class DiscoverTests : TestTemplate
 
         Assert.Multiple(() =>
         {
-            Assert.That(Names(nginx.SitesEnabled), Is.EquivalentTo([Consts.Files.DefaultSite, Consts.Files.ReportsSite]),
+            Assert.That(nginx.SitesEnabled.Select(site => site.Name), Is.EquivalentTo([Consts.Files.DefaultSite, Consts.Files.ReportsSite]),
                 "SitesEnabled should hold the sites linked in sites-enabled");
             Assert.That(nginx.SitesEnabled.Contains(nginx.Config.SitesAvailable[Consts.Files.LegacySite]), Is.False,
                 "The site without a link should not be enabled");
@@ -86,7 +86,7 @@ public sealed class DiscoverTests : TestTemplate
         var root = Arrange.ConfDOnlyLayout();
         var loadedByNginx = await NginxDump.LoadedFilesAsync(Path.Combine(root, Consts.Files.OfficialMain));
 
-        var nginx = Nginx.Discover(new NginxEnvironment(ConfigRoot: root));
+        var nginx = Nginx.Discover(new NginxEnvironment(configRoot: root));
 
         Assert.Multiple(() =>
         {

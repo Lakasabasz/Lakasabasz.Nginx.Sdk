@@ -14,62 +14,62 @@ public sealed record NginxTestResult(
 /// <param name="Message">Message without the level and location.</param>
 /// <param name="File">File the message points at, if any.</param>
 /// <param name="Line">1-based line in <paramref name="File"/>, if any.</param>
-public sealed record NginxDiagnostic(NginxLogLevel Level, string Message, string? File, int? Line)
+public sealed record NginxDiagnostic(NginxLogLevel Level, string Message, NginxPath? File, int? Line)
 {
     /// <summary>A diagnostic at <see cref="NginxLogLevel.Debug"/>.</summary>
     /// <param name="message">Message without the level and location.</param>
     /// <param name="file">File the message points at, if any.</param>
     /// <param name="line">1-based line in <paramref name="file"/>, if any.</param>
-    public static NginxDiagnostic Debug(string message, string? file = null, int? line = null) =>
+    public static NginxDiagnostic Debug(string message, NginxPath? file = null, int? line = null) =>
         new(NginxLogLevel.Debug, message, file, line);
 
     /// <summary>A diagnostic at <see cref="NginxLogLevel.Info"/>.</summary>
     /// <param name="message">Message without the level and location.</param>
     /// <param name="file">File the message points at, if any.</param>
     /// <param name="line">1-based line in <paramref name="file"/>, if any.</param>
-    public static NginxDiagnostic Info(string message, string? file = null, int? line = null) =>
+    public static NginxDiagnostic Info(string message, NginxPath? file = null, int? line = null) =>
         new(NginxLogLevel.Info, message, file, line);
 
     /// <summary>A diagnostic at <see cref="NginxLogLevel.Notice"/>.</summary>
     /// <param name="message">Message without the level and location.</param>
     /// <param name="file">File the message points at, if any.</param>
     /// <param name="line">1-based line in <paramref name="file"/>, if any.</param>
-    public static NginxDiagnostic Notice(string message, string? file = null, int? line = null) =>
+    public static NginxDiagnostic Notice(string message, NginxPath? file = null, int? line = null) =>
         new(NginxLogLevel.Notice, message, file, line);
 
     /// <summary>A diagnostic at <see cref="NginxLogLevel.Warn"/>.</summary>
     /// <param name="message">Message without the level and location.</param>
     /// <param name="file">File the message points at, if any.</param>
     /// <param name="line">1-based line in <paramref name="file"/>, if any.</param>
-    public static NginxDiagnostic Warn(string message, string? file = null, int? line = null) =>
+    public static NginxDiagnostic Warn(string message, NginxPath? file = null, int? line = null) =>
         new(NginxLogLevel.Warn, message, file, line);
 
     /// <summary>A diagnostic at <see cref="NginxLogLevel.Error"/>.</summary>
     /// <param name="message">Message without the level and location.</param>
     /// <param name="file">File the message points at, if any.</param>
     /// <param name="line">1-based line in <paramref name="file"/>, if any.</param>
-    public static NginxDiagnostic Error(string message, string? file = null, int? line = null) =>
+    public static NginxDiagnostic Error(string message, NginxPath? file = null, int? line = null) =>
         new(NginxLogLevel.Error, message, file, line);
 
     /// <summary>A diagnostic at <see cref="NginxLogLevel.Crit"/>.</summary>
     /// <param name="message">Message without the level and location.</param>
     /// <param name="file">File the message points at, if any.</param>
     /// <param name="line">1-based line in <paramref name="file"/>, if any.</param>
-    public static NginxDiagnostic Crit(string message, string? file = null, int? line = null) =>
+    public static NginxDiagnostic Crit(string message, NginxPath? file = null, int? line = null) =>
         new(NginxLogLevel.Crit, message, file, line);
 
     /// <summary>A diagnostic at <see cref="NginxLogLevel.Alert"/>.</summary>
     /// <param name="message">Message without the level and location.</param>
     /// <param name="file">File the message points at, if any.</param>
     /// <param name="line">1-based line in <paramref name="file"/>, if any.</param>
-    public static NginxDiagnostic Alert(string message, string? file = null, int? line = null) =>
+    public static NginxDiagnostic Alert(string message, NginxPath? file = null, int? line = null) =>
         new(NginxLogLevel.Alert, message, file, line);
 
     /// <summary>A diagnostic at <see cref="NginxLogLevel.Emerg"/>.</summary>
     /// <param name="message">Message without the level and location.</param>
     /// <param name="file">File the message points at, if any.</param>
     /// <param name="line">1-based line in <paramref name="file"/>, if any.</param>
-    public static NginxDiagnostic Emerg(string message, string? file = null, int? line = null) =>
+    public static NginxDiagnostic Emerg(string message, NginxPath? file = null, int? line = null) =>
         new(NginxLogLevel.Emerg, message, file, line);
 }
 

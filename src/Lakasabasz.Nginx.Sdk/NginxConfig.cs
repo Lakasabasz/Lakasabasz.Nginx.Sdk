@@ -19,14 +19,14 @@ public sealed class NginxConfig
     internal NginxConfig(ConfigWorkspace workspace)
     {
         _workspace = workspace;
-        SitesAvailable = new NginxDirectory(workspace, ConfigWorkspace.SitesAvailable);
-        ConfigDirectory = new NginxDirectory(workspace, ConfigWorkspace.ConfigDirectory);
-        Snippets = new NginxDirectory(workspace, ConfigWorkspace.Snippets);
+        SitesAvailable = new NginxDirectory(workspace, ConfigLayout.SitesAvailable);
+        ConfigDirectory = new NginxDirectory(workspace, ConfigLayout.ConfigDirectory);
+        Snippets = new NginxDirectory(workspace, ConfigLayout.Snippets);
     }
 
     /// <summary>The main config file, <c>nginx.conf</c> in the config root.</summary>
     /// <exception cref="KeyNotFoundException">The main file is not loaded.</exception>
-    public NginxFile Main => this[ConfigWorkspace.MainFile];
+    public NginxFile Main => this[ConfigLayout.MainFile];
 
     /// <summary>The default site, <c>sites-available/default</c> (Debian and Ubuntu).</summary>
     /// <exception cref="KeyNotFoundException">The default site is not loaded, e.g. in a layout without <c>sites-available</c>.</exception>
@@ -47,21 +47,22 @@ public sealed class NginxConfig
     /// <c>sites-available</c>.
     /// </param>
     /// <exception cref="KeyNotFoundException">The file is not loaded; load it with <see cref="Load"/>.</exception>
-    public NginxFile this[string path] => _workspace.Get(_workspace.Resolve(path))
-        ?? throw new KeyNotFoundException($"{path} is not loaded: load it with Config.Load.");
+    public NginxFile this[NginxPath path] => _workspace.Get(_workspace.Resolve(path)) is { } document
+        ? Facades.Of(document)
+        : throw new KeyNotFoundException($"{path} is not loaded: load it with Config.Load.");
 
     /// <summary>
     /// Every loaded file: after <c>Nginx.Discover</c> everything found, after <c>Nginx.Load</c> the given file (and
     /// what it includes), after <c>Nginx.Init</c> none. Files loaded with <see cref="Load"/> or created later are
     /// added at the end; deleted ones are removed.
     /// </summary>
-    public IReadOnlyList<NginxFile> All => _workspace.Files;
+    public IReadOnlyList<NginxFile> All => _workspace.Files.Select(Facades.Of).ToList();
 
     /// <summary>Loads one existing file (not the files it includes) and adds it to <see cref="All"/>.</summary>
     /// <param name="path">Relative to the config root, or absolute.</param>
     /// <returns>The file; the same object when it is loaded already.</returns>
     /// <exception cref="NginxParseException">The file does not exist or has a syntax error.</exception>
-    public NginxFile Load(string path) => _workspace.Load(path);
+    public NginxFile Load(NginxPath path) => Facades.Of(_workspace.Load(path));
 
     /// <summary>The loaded files matching a file name or a glob in their path.</summary>
     /// <param name="pattern">
@@ -70,5 +71,5 @@ public sealed class NginxConfig
     /// <c>?</c> do not cross <c>/</c>. Enabled sites have the path of their file in <c>sites-available</c>.
     /// </param>
     /// <returns>The matching files in <see cref="All"/> order; empty when none match. Only loaded files are searched.</returns>
-    public IReadOnlyList<NginxFile> Find(string pattern) => _workspace.Find(pattern);
+    public IReadOnlyList<NginxFile> Find(string pattern) => _workspace.Find(pattern).Select(Facades.Of).ToList();
 }

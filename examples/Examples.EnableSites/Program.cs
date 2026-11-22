@@ -5,15 +5,15 @@ using Lakasabasz.Nginx.Sdk;
 var nginx = Nginx.Discover();
 
 foreach (var site in nginx.Config.SitesAvailable)
-    Console.WriteLine($"{Path.GetFileName(site.Path)}: {(nginx.SitesEnabled.Contains(site) ? "enabled" : "disabled")}");
+    Console.WriteLine($"{site.Path.Name}: {(nginx.SitesEnabled.Contains(site) ? "enabled" : "disabled")}");
 
 // Enable a new site, and disable the default one
 var shop = nginx.Config.SitesAvailable.Create("example-shop");
 shop.Directives.AddBlock("server").Directives.Add("listen", "8080");
-nginx.SitesEnabled.Add(shop);
+nginx.SitesEnabled.Enable(shop);
 
 if (nginx.Config.SitesAvailable.TryGet("default", out var defaultSite))
-    nginx.SitesEnabled.Remove(defaultSite);
+    nginx.SitesEnabled.Disable(defaultSite);
 
-Console.WriteLine($"Enabled now: {string.Join(", ", nginx.SitesEnabled.Select(site => Path.GetFileName(site.Path)))}");
+Console.WriteLine($"Enabled now: {string.Join(", ", nginx.SitesEnabled.Select(site => site.Name))}");
 return 0;
