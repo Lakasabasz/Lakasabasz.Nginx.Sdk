@@ -23,6 +23,6 @@ public sealed class ParseErrorTests : TestTemplate
 
         var nginx = Nginx.Load(main);
 
-        Assert.That(nginx.Config.All.Select(file => file.Path), Is.EqualTo<string[]>([main]), "Only the given file should be loaded");
+        Assert.That(nginx.Config.All.Select(file => file.Path), Is.EqualTo<NginxPath[]>([main]), "Only the given file should be loaded");
     }
 }

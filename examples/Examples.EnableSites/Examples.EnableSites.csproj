@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Calls CommitChanges, which is not implemented yet: built, but not run in CI until it is -->
+    <RunExample>false</RunExample>
+  </PropertyGroup>
+</Project>

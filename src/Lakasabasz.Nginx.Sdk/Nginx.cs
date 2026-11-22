@@ -24,6 +24,13 @@ public sealed class Nginx
     /// <summary>The loaded config files.</summary>
     public NginxConfig Config { get; }
 
+    /// <summary>
+    /// Writes the changes made so far (files, links of enabled sites) after <c>nginx -t</c> accepts them, then reloads
+    /// nginx. When nginx rejects them, nothing on disk changes.
+    /// </summary>
+    /// <exception cref="NotImplementedException">Not implemented yet.</exception>
+    public void CommitChanges() => throw new NotImplementedException();
+
     /// <summary>Which sites of <c>sites-available</c> are enabled: only the links in <c>sites-enabled</c>, not the content.</summary>
     public NginxSitesEnabled SitesEnabled { get; }
 
