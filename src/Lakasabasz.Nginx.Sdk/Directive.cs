@@ -1,5 +1,4 @@
-using System.Text;
-using Lakasabasz.Nginx.Sdk.Internal;
+using Lakasabasz.Nginx.Sdk.Internal.Structure;
 
 namespace Lakasabasz.Nginx.Sdk;
 
@@ -13,84 +12,32 @@ namespace Lakasabasz.Nginx.Sdk;
 /// </remarks>
 public sealed class Directive
 {
-    private readonly string? _originalHeader;
-    private IReadOnlyList<string> _arguments;
-    private bool _changed;
-
-    internal Directive(string name, IReadOnlyList<string> arguments, DirectiveKind kind, string? originalHeader,
-        int line, int column, DirectiveCollection? children, string? rawContent)
+    internal Directive(StructureDirective node)
     {
-        Name = name;
-        _arguments = arguments;
-        Kind = kind;
-        _originalHeader = originalHeader;
-        Line = line;
-        Column = column;
-        Directives = children ?? DirectiveCollection.NotABlock;
-        RawContent = rawContent;
-        Directives.Owner = this;
+        Node = node;
     }
 
     /// <summary>The directive's name, e.g. <c>listen</c>.</summary>
-    public string Name { get; }
+    public string Name => Node.Name;
 
     /// <summary>The arguments, without quotes and with escapes resolved, as nginx reads them.</summary>
-    public IReadOnlyList<string> Arguments => _arguments;
+    public IReadOnlyList<string> Arguments => Node.Arguments;
 
     /// <summary>Whether this is a block (<c>name … { … }</c>), including raw blocks.</summary>
-    public bool IsBlock => Kind != DirectiveKind.Simple;
+    public bool IsBlock => Node.IsBlock;
 
     /// <summary>The directives inside the block. Empty, and not changeable, for a simple directive or a raw block.</summary>
-    public DirectiveCollection Directives { get; }
+    public DirectiveCollection Directives => Facades.Of(Node.Block);
 
     /// <summary>The body of a raw block (e.g. Lua code) exactly as written; <see langword="null"/> otherwise.</summary>
-    public string? RawContent { get; }
+    public string? RawContent => Node.RawContent;
 
     /// <summary>1-based line where the directive starts in the loaded file; 0 for a directive added in code.</summary>
     /// <remarks>Refers to the text as loaded: it does not follow later changes of the file.</remarks>
-    public int Line { get; }
+    public int Line => Node.Line;
 
     /// <summary>1-based column where the directive starts in the loaded file; 0 for a directive added in code.</summary>
-    public int Column { get; }
+    public int Column => Node.Column;
 
-    /// <summary>The collection the directive is in, or <see langword="null"/> after it was removed.</summary>
-    internal DirectiveCollection? Parent { get; set; }
-
-    internal DirectiveKind Kind { get; }
-
-    internal void SetArguments(IReadOnlyList<string> arguments)
-    {
-        _arguments = arguments;
-        _changed = true;
-    }
-
-    internal void Render(StringBuilder output)
-    {
-        if (_originalHeader is not null && !_changed)
-            output.Append(_originalHeader);
-        else
-            ConfigWriter.AppendHeader(output, Name, _arguments, IsBlock);
-
-        switch (Kind)
-        {
-            case DirectiveKind.Simple:
-                output.Append(';');
-                break;
-            case DirectiveKind.Raw:
-                output.Append('{').Append(RawContent).Append('}');
-                break;
-            default:
-                output.Append('{');
-                Directives.Render(output);
-                output.Append('}');
-                break;
-        }
-    }
-}
-
-internal enum DirectiveKind
-{
-    Simple,
-    Block,
-    Raw,
+    internal StructureDirective Node { get; }
 }

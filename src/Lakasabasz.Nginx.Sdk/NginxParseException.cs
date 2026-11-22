@@ -5,7 +5,16 @@ namespace Lakasabasz.Nginx.Sdk;
 /// <param name="Line">1-based line of the error.</param>
 /// <param name="Column">1-based column of the error.</param>
 /// <param name="Message">What is wrong, in nginx's words, e.g. <c>unexpected "}"</c>.</param>
-public sealed record NginxParseError(string File, int Line, int Column, string Message);
+public sealed record NginxParseError(NginxPath File, int Line, int Column, string Message)
+{
+    /// <summary>A missing file, reported as nginx does: at the place that names it, or at the file itself.</summary>
+    /// <param name="missing">The file that does not exist.</param>
+    /// <param name="namedIn">The file naming it (an <c>include</c>); the missing file itself when nothing names it.</param>
+    /// <param name="line">1-based line naming it; 0 when nothing names it.</param>
+    /// <param name="column">1-based column naming it; 0 when nothing names it.</param>
+    internal static NginxParseError NotFound(NginxPath missing, NginxPath? namedIn = null, int line = 0, int column = 0) =>
+        new(namedIn ?? missing, line, column, $"open() \"{missing}\" failed (2: No such file or directory)");
+}
 
 /// <summary>
 /// Loading failed: at least one config file has a syntax error. Every file is parsed before this is thrown, so
