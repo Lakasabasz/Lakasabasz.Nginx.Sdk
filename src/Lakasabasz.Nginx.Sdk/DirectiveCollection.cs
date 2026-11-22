@@ -37,26 +37,26 @@ public sealed class DirectiveCollection : IReadOnlyList<Directive>
 
     /// <summary>Adds a simple directive, e.g. <c>Add("some_module_directive", "arg1", "arg2")</c>.</summary>
     /// <returns>The added directive.</returns>
-    public Directive Add(string name, params string[] arguments) => Facades.Of(_block.Add(name, arguments));
+    public Directive Add(string name, params string[] arguments) => Facades.Of(_block.Add(name, arguments).OrThrow());
 
     /// <summary>Adds an empty block directive, e.g. <c>AddBlock("custom_block", "arg")</c>; fill it through its <see cref="Directive.Directives"/>.</summary>
     /// <returns>The added block.</returns>
-    public Directive AddBlock(string name, params string[] arguments) => Facades.Of(_block.AddBlock(name, arguments));
+    public Directive AddBlock(string name, params string[] arguments) => Facades.Of(_block.AddBlock(name, arguments).OrThrow());
 
     /// <summary>
     /// Makes <paramref name="name"/> occur once, with <paramref name="arguments"/>: the first such directive gets them,
     /// the others are removed; without any, the directive is added.
     /// </summary>
     /// <returns>The directive with the arguments.</returns>
-    public Directive Set(string name, params string[] arguments) => Facades.Of(_block.Set(name, arguments));
+    public Directive Set(string name, params string[] arguments) => Facades.Of(_block.Set(name, arguments).OrThrow());
 
     /// <summary>Removes every directive called <paramref name="name"/> from this collection (not from nested blocks).</summary>
     /// <returns>How many were removed.</returns>
-    public int Remove(string name) => _block.Remove(name);
+    public int Remove(string name) => _block.Remove(name).OrThrow();
 
     /// <summary>Removes <paramref name="directive"/> with its line (see the class remarks).</summary>
     /// <returns><see langword="false"/> when the directive is not in this collection.</returns>
-    public bool Remove(Directive directive) => _block.Remove(directive.Node);
+    public bool Remove(Directive directive) => _block.Remove(directive.Node).OrThrow();
 
     /// <inheritdoc />
     public IEnumerator<Directive> GetEnumerator() => _block.Directives.Select(Facades.Of).GetEnumerator();

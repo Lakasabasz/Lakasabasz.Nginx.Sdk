@@ -25,7 +25,7 @@ public sealed class NginxSitesEnabled : IEnumerable<NginxPath>
     /// <summary>Enables a site: a link to it in <c>sites-enabled</c>. Nothing happens when it is enabled already.</summary>
     /// <param name="site">A site of <c>sites-available</c>; only its <see cref="NginxFile.Path"/> is used.</param>
     /// <exception cref="ArgumentException">The file is not in <c>sites-available</c>.</exception>
-    public void Enable(NginxFile site) => _links.Link(site.Path);
+    public void Enable(NginxFile site) => _links.Link(site.Path).OrThrow();
 
     /// <summary>Disables a site: its link goes. Nothing happens when it is not enabled.</summary>
     /// <param name="site">The site; only its <see cref="NginxFile.Path"/> is used.</param>

@@ -46,7 +46,7 @@ public sealed class Nginx
     /// <param name="environment">Paths of the installation and whether commands use sudo.</param>
     /// <exception cref="NginxParseException">A file has a syntax error or an included file does not exist; lists every broken file.</exception>
     public static Nginx Discover(NginxEnvironment environment) =>
-        new(environment, workspace => workspace.Discover());
+        new(environment, workspace => workspace.Discover().ThrowIfAny());
 
     /// <summary>Loads the given config file and, optionally, the files it includes.</summary>
     /// <param name="path">Config file to load; a relative path starts at the config root (<c>/etc/nginx</c>).</param>
@@ -62,9 +62,9 @@ public sealed class Nginx
         return new Nginx(environment, workspace =>
         {
             if (followIncludes)
-                workspace.LoadIncludeChain(path);
+                workspace.LoadIncludeChain(path).ThrowIfAny();
             else
-                workspace.Load(path);
+                workspace.Load(path).OrThrow();
         });
     }
 

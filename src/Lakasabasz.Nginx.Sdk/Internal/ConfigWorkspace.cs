@@ -46,30 +46,32 @@ internal sealed class ConfigWorkspace
     /// <summary>Loads one file (not the files it includes), unless it is loaded already.</summary>
     /// <param name="path">Relative to the config root, or absolute.</param>
     /// <exception cref="NginxParseException">The file does not exist or has a syntax error.</exception>
-    public ConfigDocument Load(NginxPath path)
+    public Result<ConfigDocument, NginxParseError> Load(NginxPath path)
     {
         var realPath = Resolve(path);
         if (Get(realPath) is { } loaded)
-            return loaded;
-        var file = ConfigDocument.Load(realPath);
-        _files.Add(file);
-        return file;
+            return Result<ConfigDocument, NginxParseError>.Success(loaded);
+        var read = ConfigDocument.Read(realPath);
+        if (read.IsSuccess)
+            _files.Add(read.Value);
+        return read;
     }
 
     /// <summary>Adds a file read from disk (used by <see cref="ConfigDiscovery"/>).</summary>
     public void Add(ConfigDocument file) => _files.Add(file);
 
-    public ConfigDocument Create(NginxPath realPath)
+    public Result<ConfigDocument, UsageError> Create(NginxPath realPath)
     {
         var onDisk = (realPath.IsFile || realPath.IsDirectory) && !_deleted.Contains(realPath);
         if (Get(realPath) is not null || onDisk)
-            throw new InvalidOperationException($"{realPath} already exists: get it with the indexer or TryGet instead.");
+            return Result<ConfigDocument, UsageError>.Failure(new UsageError(UsageErrorKind.InvalidOperation,
+                $"{realPath} already exists: get it with the indexer or TryGet instead."));
 
         var file = ConfigDocument.Empty(realPath);
         _files.Add(file);
         _deleted.Remove(realPath);
         _created.Add(realPath);
-        return file;
+        return Result<ConfigDocument, UsageError>.Success(file);
     }
 
     public void Delete(ConfigDocument file)

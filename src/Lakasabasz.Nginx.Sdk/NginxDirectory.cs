@@ -42,7 +42,7 @@ public sealed class NginxDirectory : IEnumerable<NginxFile>
     /// </summary>
     /// <param name="name">The file name. Nothing is added to it: in <c>conf.d</c> give the <c>.conf</c> nginx includes.</param>
     /// <exception cref="InvalidOperationException">The file is loaded already or exists on disk.</exception>
-    public NginxFile Create(string name) => Facades.Of(_workspace.Create(PathOf(name)));
+    public NginxFile Create(string name) => Facades.Of(_workspace.Create(PathOf(name)).OrThrow());
 
     /// <summary>
     /// Deletes a loaded file: it leaves <c>Config.All</c>, and an enabled site is disabled too. It is removed from disk

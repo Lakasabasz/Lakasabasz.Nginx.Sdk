@@ -62,7 +62,7 @@ public sealed class NginxConfig
     /// <param name="path">Relative to the config root, or absolute.</param>
     /// <returns>The file; the same object when it is loaded already.</returns>
     /// <exception cref="NginxParseException">The file does not exist or has a syntax error.</exception>
-    public NginxFile Load(NginxPath path) => Facades.Of(_workspace.Load(path));
+    public NginxFile Load(NginxPath path) => Facades.Of(_workspace.Load(path).OrThrow());
 
     /// <summary>The loaded files matching a file name or a glob in their path.</summary>
     /// <param name="pattern">

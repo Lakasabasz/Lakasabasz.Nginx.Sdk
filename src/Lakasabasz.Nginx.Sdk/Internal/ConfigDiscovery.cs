@@ -2,8 +2,8 @@ namespace Lakasabasz.Nginx.Sdk.Internal;
 
 /// <summary>
 /// Builds the list of files of a <see cref="ConfigWorkspace"/>: which files to load and in which order. Each file is
-/// read by <see cref="ConfigDocument.Read"/>; a missing or broken file does not stop the others, and one
-/// <see cref="NginxParseException"/> at the end lists every broken file.
+/// read by <see cref="ConfigDocument.Read"/>; a missing or broken file does not stop the others, and every one of them
+/// is returned, for the facade to report them in one <see cref="NginxParseException"/>.
 /// </summary>
 internal static class ConfigDiscovery
 {
@@ -16,8 +16,8 @@ internal static class ConfigDiscovery
     /// <c>snippets</c>. Includes are followed only from <c>nginx.conf</c>, as nginx does: a disabled site is loaded as
     /// it is.
     /// </summary>
-    /// <exception cref="NginxParseException">Some files are missing or broken; the others are loaded.</exception>
-    public static void Discover(this ConfigWorkspace workspace)
+    /// <returns>The missing and broken files; the others are loaded.</returns>
+    public static IReadOnlyList<NginxParseError> Discover(this ConfigWorkspace workspace)
     {
         var root = workspace.ConfigRoot;
         var directoryFiles = root.Append(ConfigLayout.SitesAvailable).Files(AllFiles)
@@ -28,18 +28,18 @@ internal static class ConfigDiscovery
         batch.AddIncludeChain(root.Append(ConfigLayout.MainFile));
         foreach (var file in directoryFiles)
             batch.Add(file);
-        batch.ThrowIfFailed();
+        return batch.Errors;
     }
 
     /// <summary>A file and every file it includes, at any depth (globs are expanded, each file is loaded once).</summary>
     /// <param name="workspace">The workspace to load into.</param>
     /// <param name="start">The first file; relative to the config root unless absolute.</param>
-    /// <exception cref="NginxParseException">Some files are missing or broken; the others are loaded.</exception>
-    public static void LoadIncludeChain(this ConfigWorkspace workspace, NginxPath start)
+    /// <returns>The missing and broken files; the others are loaded.</returns>
+    public static IReadOnlyList<NginxParseError> LoadIncludeChain(this ConfigWorkspace workspace, NginxPath start)
     {
         var batch = new Batch(workspace);
         batch.AddIncludeChain(workspace.ConfigRoot.CollideAppend(start));
-        batch.ThrowIfFailed();
+        return batch.Errors;
     }
 
     /// <summary>One loading: the files tried so far and the errors collected.</summary>
@@ -89,11 +89,7 @@ internal static class ConfigDiscovery
             }
         }
 
-        public void ThrowIfFailed()
-        {
-            if (_errors.Count > 0)
-                throw new NginxParseException(_errors);
-        }
+        public IReadOnlyList<NginxParseError> Errors => _errors;
     }
 
     /// <summary>The files an <c>include</c> pattern names, expanded by glob(3) as nginx does.</summary>

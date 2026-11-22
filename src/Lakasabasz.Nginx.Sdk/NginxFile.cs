@@ -21,7 +21,7 @@ public sealed class NginxFile
     /// <param name="path">The file; links are resolved, a relative path starts at the current directory.</param>
     /// <returns>The file, not part of any <see cref="Nginx"/>.</returns>
     /// <exception cref="NginxParseException">The file does not exist or has a syntax error.</exception>
-    public static NginxFile Load(NginxPath path) => Facades.Of(ConfigDocument.Load(path));
+    public static NginxFile Load(NginxPath path) => Facades.Of(ConfigDocument.Read(path).OrThrow());
 
     /// <summary>
     /// Full path of the file, with links resolved: a site loaded through its link in <c>sites-enabled</c> has the path

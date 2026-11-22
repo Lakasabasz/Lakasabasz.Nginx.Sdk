@@ -24,14 +24,17 @@ internal sealed class SiteLinks
 
     public bool IsLinked(NginxPath site) => _targets.Contains(site);
 
-    /// <summary>Links the site; nothing happens when it is linked already.</summary>
-    /// <exception cref="ArgumentException">The site is not directly in <c>sites-available</c>.</exception>
-    public void Link(NginxPath site)
+    /// <summary>Links the site; nothing happens when it is linked already. Only a site directly in <c>sites-available</c> can be linked.</summary>
+    /// <returns>Whether a link was added now.</returns>
+    public Result<bool, UsageError> Link(NginxPath site)
     {
         if (!site.IsIn(_sitesAvailable))
-            throw new ArgumentException($"{site} is not in {ConfigLayout.SitesAvailable}: only sites there can be enabled.", nameof(site));
-        if (!IsLinked(site))
-            _targets.Add(site);
+            return Result<bool, UsageError>.Failure(new UsageError(UsageErrorKind.Argument,
+                $"{site} is not in {ConfigLayout.SitesAvailable}: only sites there can be enabled.", nameof(site)));
+        if (IsLinked(site))
+            return Result<bool, UsageError>.Success(false);
+        _targets.Add(site);
+        return Result<bool, UsageError>.Success(true);
     }
 
     /// <summary>Removes the link to the site; nothing happens when there is none.</summary>

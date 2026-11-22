@@ -36,14 +36,6 @@ internal sealed class ConfigDocument
             : Result<ConfigDocument, NginxParseError>.Failure(parsed.Error);
     }
 
-    /// <summary><see cref="Read"/> that throws: the file does not exist or has a syntax error.</summary>
-    /// <exception cref="NginxParseException">The file does not exist or has a syntax error.</exception>
-    public static ConfigDocument Load(NginxPath path)
-    {
-        var result = Read(path);
-        return result.IsSuccess ? result.Value : throw new NginxParseException([result.Error]);
-    }
-
     /// <summary>A new, empty file, not on disk yet.</summary>
     public static ConfigDocument Empty(NginxPath path) =>
         new(path, ConfigSource.Empty, ConfigParser.Parse(path, ConfigSource.Empty.Text).Value!);
