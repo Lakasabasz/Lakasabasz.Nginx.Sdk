@@ -12,8 +12,14 @@ internal sealed class BlockChanges
     /// <summary>Directives whose arguments changed.</summary>
     public List<StructureDirective> Changed { get; } = [];
 
-    /// <summary>Directives added, in order, with everything in them: they go after the last directive of the block.</summary>
-    public List<StructureDirective> Added { get; } = [];
+    /// <summary>Directives whose comment changed.</summary>
+    public List<StructureDirective> Commented { get; } = [];
+
+    /// <summary>Block directives whose style changed.</summary>
+    public List<StructureDirective> Restyled { get; } = [];
+
+    /// <summary>Directives and comments added, in order, with everything in them: they go after the last directive of the block.</summary>
+    public List<StructureNode> Added { get; } = [];
 
     /// <summary>The changes inside the blocks that were there before.</summary>
     public List<(StructureDirective Directive, BlockChanges Changes)> Nested { get; } = [];

@@ -24,7 +24,7 @@ internal sealed class SyntaxTree
     public SyntaxBlock Root { get; }
 
     /// <summary>The line break and indentation unit of the file, for new text.</summary>
-    public Formatting Formatting { get; }
+    public Formatting Formatting { get; set; }
 
     /// <summary>The internal structure of the file: its directives, without formatting.</summary>
     public StructureBlock Structure => _binding.Structure;
