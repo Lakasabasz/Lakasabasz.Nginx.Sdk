@@ -10,10 +10,13 @@ namespace Lakasabasz.Nginx.Sdk;
 /// <para>Changes keep the rest of the file as it was; only the changed directive's own text is written anew:</para>
 /// <list type="bullet">
 /// <item><see cref="Add"/> and <see cref="AddBlock"/> append after the last directive, on a new line indented like
-/// the previous directive (in an empty block: one level deeper than the block, with the file's indentation unit, a
-/// tab or four spaces). In a block written on one line (<c>server { listen 80; }</c>) they stay on that line.</item>
+/// the previous directive (in an empty block: one level deeper than the block, by the indentation of its style). A new
+/// block gets the empty lines of the style's <see cref="NginxStyle.BlockSpacing"/> above it, unless it is the first
+/// directive of its block. In a block written on one line (<c>server { listen 80; }</c>) a simple directive stays on
+/// that line; a block or a commented directive puts the block onto lines first.</item>
 /// <item><see cref="Remove(Directive)"/> removes the directive's line: its indentation, the directive, a comment
-/// after it on the same line and the line break. The other directives of that line, if any, stay.</item>
+/// after it on the same line and the line break. The other directives of that line, if any, stay. A block goes with
+/// its comment above it and the empty lines above that.</item>
 /// <item><see cref="Set"/> leaves exactly one directive of the name: the first one gets the arguments, the others
 /// are removed; without any, the directive is added.</item>
 /// <item>Changed arguments are written separated by single spaces and quoted (<c>"…"</c>) only when nginx needs it:

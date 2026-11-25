@@ -16,164 +16,163 @@ namespace Lakasabasz.Nginx.Sdk.Internal.Syntax;
 /// <item>A raw block (<c>*_by_lua_block</c> of OpenResty) keeps its body as text, read up to the matching <c>}</c>
 /// outside Lua strings and comments. (njs has no inline code in the config: it loads files with <c>js_import</c>.)</item>
 /// </list>
-/// Parsing stops at the first error of a file, as nginx does. This file reads lines and directives; words are in
+/// Every step works on the cursor it is given: <c>Take…</c> takes text from it as written, <c>Parse…</c> takes text and
+/// turns it into words or nodes, <c>Skip…</c> moves past text; the cursor's <c>Read…</c> and the questions <c>At…</c> / <c>IsAt…</c> only look. Parsing stops
+/// at the first error of a file, as nginx does: each step returns its result or the error, and a step that gets an
+/// error returns it at once. This file reads lines and directives; words are in
 /// ConfigParser.Words.cs, raw Lua blocks in ConfigParser.Lua.cs.
 /// </remarks>
-internal sealed partial class ConfigParser
+internal static partial class ConfigParser
 {
     private const string EndOfFileInBlock = "unexpected end of file, expecting \"}\"";
     private const string EndOfFileInDirective = "unexpected end of file, expecting \";\" or \"}\"";
 
-    private readonly TextCursor _text;
-
-    private ConfigParser(string text)
-    {
-        _text = new TextCursor(text);
-    }
-
     /// <summary>The syntax tree of the file, or its syntax error.</summary>
     public static Result<SyntaxTree, NginxParseError> Parse(NginxPath file, string text)
     {
-        var parser = new ConfigParser(text);
-        try
-        {
-            return Result<SyntaxTree, NginxParseError>.Success(new SyntaxTree(parser.ParseFile(), Formatting.Of(text)));
-        }
-        catch (SyntaxError error)
-        {
-            var (line, column) = parser._text.LineAndColumn(error.Position);
-            return Result<SyntaxTree, NginxParseError>.Failure(new NginxParseError(file, line, column, error.Message));
-        }
+        var cursor = new TextCursor(text);
+        return ParseFile(cursor)
+            .Map(root => new SyntaxTree(root, text))
+            .MapError(problem => ErrorOf(file, problem));
     }
 
-    private SyntaxBlock ParseFile() => FileOf(ParseLines(insideBlock: false));
+    private static Result<SyntaxBlock, SyntaxProblem> ParseFile(TextCursor cursor) => ParseLines(cursor, insideBlock: false).Map(FileOf);
 
     /// <summary>The lines of a file, or of a block up to its closing <c>}</c> (consumed).</summary>
-    private List<SyntaxLine> ParseLines(bool insideBlock)
+    private static Result<List<SyntaxLine>, SyntaxProblem> ParseLines(TextCursor cursor, bool insideBlock)
     {
         var lines = new List<SyntaxLine>();
-        var line = new SyntaxLine { Indentation = ReadBlanks() };
-        while (true)
+        while (lines.Count == 0 || lines[^1].EndsWithLineBreak)
         {
-            var spacing = ReadBlanks();
-            if (_text.AtEnd)
-            {
-                if (insideBlock)
-                    throw new SyntaxError(_text.Position, EndOfFileInBlock);
-                lines.Add(Finish(line, spacing, ending: string.Empty));
-                return lines;
-            }
-
-            if (_text.AtLineBreak)
-            {
-                lines.Add(Finish(line, spacing, ReadLineBreak()));
-                line = new SyntaxLine { Indentation = ReadBlanks() };
-                continue;
-            }
-
-            switch (_text.Current)
-            {
-                case '}' when insideBlock:
-                    _text.Advance();
-                    lines.Add(Finish(line, spacing, ending: string.Empty));
-                    return lines;
-                case '}' or ';' or '{':
-                    throw Unexpected();
-                case '#':
-                    line.Items.Add(new SyntaxItem(spacing, ReadComment()));
-                    break;
-                default:
-                    line.Items.Add(new SyntaxItem(spacing, ParseDirective()));
-                    break;
-            }
+            var line = ParseLine(cursor, insideBlock);
+            if (!line.IsSuccess)
+                return Failure<List<SyntaxLine>>(line.Error);
+            lines.Add(line.Value);
         }
+
+        if (!insideBlock)
+            return Success(lines);
+        if (cursor.AtEnd)
+            return Failure<List<SyntaxLine>>(Problem(cursor, EndOfFileInBlock));
+        cursor.Advance();
+        return Success(lines);
     }
 
-    private SyntaxDirective ParseDirective()
+    /// <summary>
+    /// One line: its comments and directives up to its line break (consumed), the end of the text, or, in a block, the
+    /// block's <c>}</c> (not consumed).
+    /// </summary>
+    private static Result<SyntaxLine, SyntaxProblem> ParseLine(TextCursor cursor, bool insideBlock)
     {
-        var start = _text.Position;
-        var (line, column) = _text.LineAndColumn(start);
-        var words = ReadWordsOfDirective();
-        var header = _text.Take(start);
-        var endsWithBlock = _text.Current == '{';
-        _text.Advance();
+        var line = SyntaxLine.PrepareWithIndent(TakeBlanks(cursor));
+        var spacing = string.Empty;
+        while (!IsAtLineEnd(cursor, insideBlock))
+        {
+            var item = ParseItem(cursor);
+            if (!item.IsSuccess)
+                return Failure<SyntaxLine>(item.Error);
+            line.Items.Add(new SyntaxItem(spacing, item.Value));
+            spacing = TakeBlanks(cursor);
+        }
+        return Success(line.EndWith(spacing, TakeLineBreak(cursor)));
+    }
 
-        var name = words[0];
-        var arguments = words.Skip(1).ToArray();
+    /// <summary>Whether the cursor is at the end of a line (it does not move): the end of the text, a line break, or, in a block, its <c>}</c>.</summary>
+    private static bool IsAtLineEnd(TextCursor cursor, bool insideBlock) =>
+        cursor.AtEnd || cursor.AtLineBreak || (insideBlock && cursor.Current.IsBlockEnd());
+
+    /// <summary>The next thing on a line: a comment or a directive; <c>}</c>, <c>;</c> or <c>{</c> cannot start one.</summary>
+    private static Result<SyntaxNode, SyntaxProblem> ParseItem(TextCursor cursor) => cursor.Current switch
+    {
+        var c when c.IsBlockBegin() || c.IsBlockEnd() || c.IsDirectiveEnd() => Failure<SyntaxNode>(Unexpected(cursor)),
+        var c when c.IsCommentStart() => Success<SyntaxNode>(TakeComment(cursor)),
+        _ => ParseDirective(cursor).Map(SyntaxNode (directive) => directive),
+    };
+
+    private static Result<SyntaxDirective, SyntaxProblem> ParseDirective(TextCursor cursor)
+    {
+        var start = cursor.CurrentPosition;
+        var words = ParseWordsOfDirective(cursor);
+        if (!words.IsSuccess)
+            return Failure<SyntaxDirective>(words.Error);
+
+        var header = cursor.ReadSince(start);
+        var endsWithBlock = cursor.Current.IsBlockBegin();
+        cursor.Advance();
+
+        var name = words.Value[0];
+        var arguments = words.Value.Skip(1).ToArray();
         if (!endsWithBlock)
-            return new SyntaxDirective(name, arguments, header, null, null, line, column);
-        if (IsRawBlock(name))
-            return new SyntaxDirective(name, arguments, header, null, ReadRawBody(), line, column);
-        return new SyntaxDirective(name, arguments, header, BlockOf(ParseLines(insideBlock: true)), null, line, column);
+            return Success(new SyntaxDirective(name, arguments, header, null, null, start.Line, start.Column));
+        return IsRawBlock(name)
+            ? TakeRawBody(cursor).Map(body => new SyntaxDirective(name, arguments, header, null, body, start.Line, start.Column))
+            : ParseLines(cursor, insideBlock: true).Map(lines => new SyntaxDirective(name, arguments, header, BlockOf(lines), null, start.Line, start.Column));
     }
 
     /// <summary>The name and arguments of a directive, up to its <c>;</c> or <c>{</c> (not consumed).</summary>
-    private List<string> ReadWordsOfDirective()
+    private static Result<List<string>, SyntaxProblem> ParseWordsOfDirective(TextCursor cursor)
     {
         var words = new List<string>();
-        do
+        while (!cursor.AtEnd && !IsAtEndOfWords(cursor))
         {
-            words.Add(ReadWord());
-            SkipSpaceAndComments();
-            if (_text.AtEnd)
-                throw new SyntaxError(_text.Position, EndOfFileInDirective);
-            if (_text.Current == '}')
-                throw Unexpected();
+            if (cursor.Current.IsBlockEnd())
+                return Failure<List<string>>(Unexpected(cursor));
+            var word = ParseWord(cursor);
+            if (!word.IsSuccess)
+                return Failure<List<string>>(word.Error);
+            words.Add(word.Value);
+            SkipSpaceAndComments(cursor);
         }
-        while (_text.Current is not (';' or '{'));
-        return words;
+        return cursor.AtEnd ? Failure<List<string>>(Problem(cursor, EndOfFileInDirective)) : Success(words);
     }
 
+    /// <summary>Whether the cursor is at the end of a directive's words (it does not move): its <c>;</c> or <c>{</c>.</summary>
+    private static bool IsAtEndOfWords(TextCursor cursor) => cursor.Current.IsDirectiveEnd() || cursor.Current.IsBlockBegin();
+
     /// <summary>Whitespace, line breaks and comments between the words of a directive.</summary>
-    private void SkipSpaceAndComments()
+    private static void SkipSpaceAndComments(TextCursor cursor)
     {
-        while (!_text.AtEnd)
+        while (!cursor.AtEnd)
         {
-            if (_text.Current == '#')
-                SkipToLineEnd();
-            else if (IsSpace(_text.Current))
-                _text.Advance();
+            if (cursor.Current.IsCommentStart())
+                SkipToLineEnd(cursor);
+            else if (cursor.Current.IsSpace())
+                cursor.Advance();
             else
                 return;
         }
     }
 
     /// <summary>Spaces and tabs (and a <c>\r</c> not starting a line break): the spacing on a line.</summary>
-    private string ReadBlanks()
+    private static string TakeBlanks(TextCursor cursor)
     {
-        var start = _text.Position;
-        while (!_text.AtEnd && (_text.Current is ' ' or '\t' || _text.Current == '\r' && !_text.AtLineBreak))
-            _text.Advance();
-        return _text.Take(start);
+        var start = cursor.CurrentPosition;
+        while (!cursor.AtEnd && (cursor.Current is ' ' or '\t' || cursor.Current == '\r' && !cursor.AtLineBreak))
+            cursor.Advance();
+        return cursor.ReadSince(start);
     }
 
-    private string ReadLineBreak()
+    /// <summary>The line break here, consumed; empty when there is none.</summary>
+    private static string TakeLineBreak(TextCursor cursor)
     {
-        var start = _text.Position;
-        _text.Advance(_text.LineBreakLength);
-        return _text.Take(start);
+        var start = cursor.CurrentPosition;
+        cursor.Advance(cursor.LineBreakLength);
+        return cursor.ReadSince(start);
     }
 
-    private SyntaxComment ReadComment()
+    private static SyntaxComment TakeComment(TextCursor cursor)
     {
-        var start = _text.Position;
-        while (!_text.AtEnd && !_text.AtLineBreak)
-            _text.Advance();
-        return new SyntaxComment(_text.Take(start));
+        var start = cursor.CurrentPosition;
+        while (!cursor.AtEnd && !cursor.AtLineBreak)
+            cursor.Advance();
+        return new SyntaxComment(cursor.ReadSince(start));
     }
 
     /// <summary>Up to the <c>\n</c> ending the line (not consumed).</summary>
-    private void SkipToLineEnd()
+    private static void SkipToLineEnd(TextCursor cursor)
     {
-        while (!_text.AtEnd && _text.Current != '\n')
-            _text.Advance();
-    }
-
-    private static SyntaxLine Finish(SyntaxLine line, string trailing, string ending)
-    {
-        line.Trailing = trailing;
-        line.Ending = ending;
-        return line;
+        while (!cursor.AtEnd && cursor.Current != '\n')
+            cursor.Advance();
     }
 
     /// <summary>The lines of a file; the empty rest after the last line break is not a line.</summary>
@@ -181,9 +180,7 @@ internal sealed partial class ConfigParser
     {
         if (lines[^1].IsEmpty)
             lines.RemoveAt(lines.Count - 1);
-        var file = new SyntaxBlock();
-        file.Lines.AddRange(lines);
-        return file;
+        return SyntaxBlock.PrepareFile(lines);
     }
 
     /// <summary>
@@ -192,47 +189,70 @@ internal sealed partial class ConfigParser
     /// </summary>
     private static SyntaxBlock BlockOf(List<SyntaxLine> lines)
     {
-        var block = new SyntaxBlock();
-        var first = lines[0];
-        if (lines.Count == 1 && first.Items.Count == 0)
-        {
-            block.BeforeClosing = first.Indentation + first.Trailing;
-            return block;
-        }
-
-        if (first.Items.Count == 0)
-        {
-            block.AfterOpening = first.Indentation + first.Trailing + first.Ending;
-            lines.RemoveAt(0);
-        }
-        else
-        {
-            block.AfterOpening = first.Indentation;
-            first.Indentation = string.Empty;
-        }
-
-        var last = lines[^1];
-        if (last.Items.Count == 0)
-        {
-            block.BeforeClosing = last.Indentation + last.Trailing;
-            lines.RemoveAt(lines.Count - 1);
-        }
-        else
-        {
-            block.BeforeClosing = last.Trailing;
-            last.Trailing = string.Empty;
-        }
-        block.Lines.AddRange(lines);
-        return block;
+        var afterOpening = TakeOpening(lines);
+        var beforeClosing = TakeClosing(lines);
+        return SyntaxBlock.PrepareBetweenBraces(afterOpening, lines, beforeClosing);
     }
 
-    private SyntaxError Unexpected() => new(_text.Position, $"unexpected \"{_text.Current}\"");
-
-    private static bool IsSpace(char c) => c is ' ' or '\t' or '\r' or '\n';
-
-    /// <summary>A syntax error at a position; it stops parsing, as nginx stops at the first error of a file.</summary>
-    private sealed class SyntaxError(int position, string message) : Exception(message)
+    /// <summary>
+    /// Takes what stands right after <c>{</c>: the spaces before the first item on its line, or, when nothing follows
+    /// <c>{</c> on its line, that whole rest of the line with its line break. In an empty block it takes nothing: the
+    /// spaces between the braces stand before <c>}</c>.
+    /// </summary>
+    private static string TakeOpening(List<SyntaxLine> lines)
     {
-        public int Position { get; } = position;
+        var first = lines[0];
+        if (!first.IsBlank)
+        {
+            var indentation = first.Indentation;
+            first.Indentation = string.Empty;
+            return indentation;
+        }
+
+        if (IsEmptyBlock(lines))
+            return string.Empty;
+        lines.RemoveAt(0);
+        return first.Indentation + first.Trailing + first.Ending;
     }
+
+    /// <summary>Whether there is nothing between the braces but spaces: <c>{ }</c>, <c>{}</c>.</summary>
+    private static bool IsEmptyBlock(List<SyntaxLine> lines) => lines is [{ IsBlank: true }];
+
+    /// <summary>
+    /// Takes what stands right before <c>}</c>: the spaces after the last item on its line, or, when <c>}</c> starts its
+    /// line, the indentation before it.
+    /// </summary>
+    private static string TakeClosing(List<SyntaxLine> lines)
+    {
+        var last = lines[^1];
+        if (!last.IsBlank)
+        {
+            var trailing = last.Trailing;
+            last.Trailing = string.Empty;
+            return trailing;
+        }
+
+        lines.RemoveAt(lines.Count - 1);
+        return last.Indentation + last.Trailing;
+    }
+
+    /// <summary>The parse error of <paramref name="file"/> for a problem.</summary>
+    private static NginxParseError ErrorOf(NginxPath file, SyntaxProblem problem)
+    {
+        return new NginxParseError(file, problem.Position.Line, problem.Position.Column, problem.Message);
+    }
+
+    /// <summary>The error for the character at the current position.</summary>
+    private static SyntaxProblem Unexpected(TextCursor cursor) => Problem(cursor, $"unexpected \"{cursor.Current}\"");
+
+    /// <summary>An error at the current position.</summary>
+    private static SyntaxProblem Problem(TextCursor cursor, string message) => new(cursor.CurrentPosition, message);
+
+    private static Result<T, SyntaxProblem> Success<T>(T value) => Result<T, SyntaxProblem>.Success(value);
+
+    private static Result<T, SyntaxProblem> Failure<T>(SyntaxProblem problem) => Result<T, SyntaxProblem>.Failure(problem);
+
+
+    /// <summary>A syntax error at a position of the text, in nginx's words; it ends the parsing of the file.</summary>
+    private sealed record SyntaxProblem(TextPosition Position, string Message);
 }

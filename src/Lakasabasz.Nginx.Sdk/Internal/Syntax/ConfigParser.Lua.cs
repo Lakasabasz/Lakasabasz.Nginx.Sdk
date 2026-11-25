@@ -1,78 +1,78 @@
 namespace Lakasabasz.Nginx.Sdk.Internal.Syntax;
 
 /// <summary>Raw blocks: the Lua code of OpenResty's <c>*_by_lua_block</c>, kept as text.</summary>
-internal sealed partial class ConfigParser
+internal static partial class ConfigParser
 {
     private const string LuaBlockSuffix = "_by_lua_block";
 
     private static bool IsRawBlock(string name) => name.EndsWith(LuaBlockSuffix, StringComparison.Ordinal);
 
     /// <summary>The body of a raw block, up to its closing <c>}</c> (consumed); braces in Lua strings and comments do not count.</summary>
-    private string ReadRawBody()
+    private static Result<string, SyntaxProblem> TakeRawBody(TextCursor cursor)
     {
-        var start = _text.Position;
+        var start = cursor.CurrentPosition;
         var depth = 0;
-        while (!_text.AtEnd)
+        while (!cursor.AtEnd)
         {
-            if (SkipLuaString() || SkipLuaComment() || SkipLuaLongBracket())
+            if (SkipLuaString(cursor) || SkipLuaComment(cursor) || SkipLuaLongBracket(cursor))
                 continue;
 
-            switch (_text.Current)
+            switch (cursor.Current)
             {
                 case '{':
                     depth++;
                     break;
                 case '}' when depth == 0:
-                    var body = _text.Take(start);
-                    _text.Advance();
-                    return body;
+                    var body = cursor.ReadSince(start);
+                    cursor.Advance();
+                    return Success(body);
                 case '}':
                     depth--;
                     break;
             }
-            _text.Advance();
+            cursor.Advance();
         }
-        throw new SyntaxError(_text.Position, EndOfFileInBlock);
+        return Failure<string>(Problem(cursor, EndOfFileInBlock));
     }
 
     /// <summary>Skips a Lua string in quotes, which ends at its quote or at the end of the line.</summary>
-    private bool SkipLuaString()
+    private static bool SkipLuaString(TextCursor cursor)
     {
-        var quote = _text.Current;
-        if (quote is not ('"' or '\''))
+        var quote = cursor.Current;
+        if (!quote.IsQuote())
             return false;
-        _text.Advance();
-        while (!_text.AtEnd && _text.Current != quote && _text.Current != '\n')
-            _text.Advance(_text.Current == Escape ? 2 : 1);
-        _text.Advance();
+        cursor.Advance();
+        while (!cursor.AtEnd && cursor.Current != quote && cursor.Current != '\n')
+            cursor.Advance(cursor.Current.IsEscape() ? 2 : 1);
+        cursor.Advance();
         return true;
     }
 
     /// <summary>Skips a Lua comment: <c>--</c> to the end of the line, or <c>--[[ … ]]</c>.</summary>
-    private bool SkipLuaComment()
+    private static bool SkipLuaComment(TextCursor cursor)
     {
-        if (_text.Current != '-' || _text.Peek(1) != '-')
+        if (cursor.Current != '-' || cursor.Peek(1) != '-')
             return false;
-        _text.Advance(2);
-        if (!SkipLuaLongBracket())
-            SkipToLineEnd();
+        cursor.Advance(2);
+        if (!SkipLuaLongBracket(cursor))
+            SkipToLineEnd(cursor);
         return true;
     }
 
     /// <summary>Skips a Lua long bracket (<c>[[ … ]]</c>, <c>[==[ … ]==]</c>) starting here, if there is one.</summary>
-    private bool SkipLuaLongBracket()
+    private static bool SkipLuaLongBracket(TextCursor cursor)
     {
-        if (_text.Current != '[')
+        if (cursor.Current != '[')
             return false;
         var level = 0;
-        while (_text.Peek(1 + level) == '=')
+        while (cursor.Peek(1 + level) == '=')
             level++;
-        if (_text.Peek(1 + level) != '[')
+        if (cursor.Peek(1 + level) != '[')
             return false;
 
         var close = "]" + new string('=', level) + "]";
-        var end = _text.Text.IndexOf(close, _text.Position + level + 2, StringComparison.Ordinal);
-        _text.MoveTo(end < 0 ? _text.Text.Length : end + close.Length);
+        var end = cursor.Text.IndexOf(close, cursor.Index + level + 2, StringComparison.Ordinal);
+        cursor.MoveTo(end < 0 ? cursor.Text.Length : end + close.Length);
         return true;
     }
 }
