@@ -8,7 +8,7 @@ public sealed class Upstream : Section
 {
     internal const string Keyword = "upstream";
 
-    private const string ServerName = "server";
+    private const string UpstreamServerName = "server";
     private const string KeepAliveName = "keepalive";
     private const string KeepAliveTimeoutName = "keepalive_timeout";
 
@@ -31,7 +31,7 @@ public sealed class Upstream : Section
     }
 
     /// <summary>The servers of the group, one per <c>server</c> directive.</summary>
-    public IList<UpstreamServer> Servers => new DirectiveList<UpstreamServer>(Block, ServerName, UpstreamServer.Read, server => server.Arguments());
+    public IList<UpstreamServer> Servers => new DirectiveList<UpstreamServer>(Block, UpstreamServerName, UpstreamServer.Read, server => server.Arguments());
 
     /// <summary>The idle connections to the servers each worker keeps open (<c>keepalive</c>).</summary>
     public int? KeepAlive

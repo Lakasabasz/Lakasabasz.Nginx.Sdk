@@ -20,7 +20,6 @@ public sealed class Server : HttpSection
     private const string NameName = "server_name";
     private const string ListenName = "listen";
     private const string TryFilesName = "try_files";
-    private const int DefaultPort = 80;
 
     /// <summary>A loose <c>server { }</c>, in no file until it is added to a <see cref="ServerCollection"/>.</summary>
     public Server()
@@ -61,8 +60,8 @@ public sealed class Server : HttpSection
     public IList<string> TryFiles => new ArgumentList(Block, TryFilesName);
 
     private static List<int> PortsOf(IEnumerable<Listen> listens) => listens
-        .Where(listen => listen.Address is null || !listen.Address.StartsWith("unix:", StringComparison.Ordinal))
-        .Select(listen => listen.Port ?? DefaultPort)
+        .Where(listen => listen.EffectivePort is not null)
+        .Select(listen => listen.EffectivePort!.Value)
         .Distinct()
         .ToList();
 }

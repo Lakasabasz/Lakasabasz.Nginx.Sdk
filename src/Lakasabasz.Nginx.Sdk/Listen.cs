@@ -18,6 +18,7 @@ public sealed record Listen
     private const string ReusePortFlag = "reuseport";
     private const string Ipv6OnlyParameter = "ipv6only=";
     private const string UnixPrefix = "unix:";
+    private const int DefaultPort = 80;
 
     /// <summary>The address without the port, e.g. <c>127.0.0.1</c>, <c>[::]</c>, <c>*</c> or <c>unix:/run/site.sock</c>; <see langword="null"/> for all addresses.</summary>
     public string? Address { get; init; }
@@ -45,6 +46,12 @@ public sealed record Listen
 
     /// <summary>An IPv6 address takes only IPv6 connections (<c>ipv6only=on</c>) or both (<c>off</c>); <see langword="null"/> when not given.</summary>
     public bool? Ipv6Only { get; init; }
+
+    /// <summary>A unix socket (<c>unix:…</c>) rather than an address and port.</summary>
+    public bool IsUnixSocket => Address?.StartsWith(UnixPrefix, StringComparison.Ordinal) == true;
+
+    /// <summary>The port nginx listens on: <see cref="Port"/>, or 80 when none is given; <see langword="null"/> for a unix socket.</summary>
+    public int? EffectivePort => IsUnixSocket ? null : Port ?? DefaultPort;
 
     /// <summary>The other parameters, as written, e.g. <c>backlog=512</c>.</summary>
     public IReadOnlyList<string> Parameters { get; init; } = [];

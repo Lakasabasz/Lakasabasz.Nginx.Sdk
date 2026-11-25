@@ -30,7 +30,10 @@ public sealed class Http : HttpSection
     /// <summary>The certificate and TLS settings shared by the servers (<c>ssl_*</c>).</summary>
     public SslSettings Ssl => new(Block);
 
-    /// <summary>Response headers are sent in one packet with the file's start (<c>tcp_nopush on|off</c>, with <c>sendfile</c>).</summary>
+    /// <summary>
+    /// With <c>sendfile</c>, the response header and the first part of the file are sent in one packet
+    /// (<c>tcp_nopush on|off</c>).
+    /// </summary>
     public bool? TcpNoPush
     {
         get => DirectiveValues.GetSwitch(Block, TcpNoPushName);

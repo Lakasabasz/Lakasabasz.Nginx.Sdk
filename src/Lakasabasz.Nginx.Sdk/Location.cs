@@ -12,14 +12,6 @@ public sealed class Location : HttpSection
     private const string AliasName = "alias";
     private const string TryFilesName = "try_files";
 
-    private static readonly (LocationModifier Modifier, string Text)[] Modifiers =
-    [
-        (LocationModifier.Exact, "="),
-        (LocationModifier.PreferPrefix, "^~"),
-        (LocationModifier.RegexIgnoreCase, "~*"),
-        (LocationModifier.Regex, "~"),
-    ];
-
     /// <summary>A loose prefix location, e.g. <c>new Location("/api")</c>, in no file until it is added to a <see cref="LocationCollection"/>.</summary>
     public Location(string path)
         : this(LocationModifier.None, path)
@@ -37,7 +29,10 @@ public sealed class Location : HttpSection
     {
     }
 
-    /// <summary>The path, prefix or regex the location matches, e.g. <c>/api</c> or <c>\.php$</c>; <c>@name</c> for a named location.</summary>
+    /// <summary>
+    /// The path, prefix or regex the location matches, e.g. <c>/api</c> or <c>\.php$</c>; <c>@name</c> for a named
+    /// location. Setting it (or <see cref="Modifier"/>) writes the modifier as a word of its own: <c>=/x</c> becomes <c>= /x</c>.
+    /// </summary>
     public string Path
     {
         get => Key.Path;
@@ -78,21 +73,7 @@ public sealed class Location : HttpSection
         set => Sections.Set(Block, Sdk.LimitExcept.Keyword, value);
     }
 
-    private (LocationModifier Modifier, string Path) Key => Node.Arguments switch
-    {
-        [var modifier, var path] when ModifierOf(modifier) is { } known => (known, path),
-        [var text] => Modifiers
-            .Where(known => text.Length > known.Text.Length && text.StartsWith(known.Text, StringComparison.Ordinal))
-            .Select(known => (known.Modifier, text.Substring(known.Text.Length)))
-            .DefaultIfEmpty((LocationModifier.None, text))
-            .First(),
-        _ => throw DirectiveValues.NotA(Node, "a path with an optional modifier"),
-    };
+    private LocationKey Key => LocationKey.Read(Node.Arguments) ?? throw DirectiveValues.NotA(Node, "a path with an optional modifier");
 
-    internal static string[] ArgumentsOf(LocationModifier modifier, string path) => modifier == LocationModifier.None
-        ? [path]
-        : [Modifiers.First(known => known.Modifier == modifier).Text, path];
-
-    private static LocationModifier? ModifierOf(string text) =>
-        Modifiers.Where(known => known.Text == text).Select(known => (LocationModifier?)known.Modifier).FirstOrDefault();
+    internal static string[] ArgumentsOf(LocationModifier modifier, string path) => new LocationKey(modifier, path).Arguments();
 }
