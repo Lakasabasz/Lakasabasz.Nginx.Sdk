@@ -70,6 +70,9 @@ internal sealed class SyntaxLine
     /// <summary>A line being prepared: only its indentation so far, its items and end still to come.</summary>
     public static SyntaxLine PrepareWithIndent(string indentation) => new() { Indentation = indentation };
 
+    /// <summary>An empty line: only its line break.</summary>
+    public static SyntaxLine Blank(string lineBreak) => new() { Ending = lineBreak };
+
     /// <summary>A line holding only <paramref name="node"/>, indented and ended as given.</summary>
     public static SyntaxLine Holding(SyntaxNode node, string indentation, string lineBreak)
     {
@@ -95,6 +98,9 @@ internal sealed class SyntaxLine
 
     /// <summary>A line with nothing on it but whitespace.</summary>
     public bool IsBlank => Items.Count == 0;
+
+    /// <summary>A line holding only a comment.</summary>
+    public bool IsCommentLine => Items is [{ Node: SyntaxComment }];
 
     public void Render(StringBuilder output)
     {

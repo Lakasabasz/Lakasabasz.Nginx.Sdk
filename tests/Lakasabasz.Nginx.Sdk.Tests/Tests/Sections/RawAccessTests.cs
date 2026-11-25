@@ -22,12 +22,13 @@ public sealed class RawAccessTests : TestTemplate
     #endregion
 
     [Test]
-    [Description("A directive of a module outside nginx is read raw: name, arguments and its text as written in the file.")]
+    [Description("A directive of a module outside nginx is read raw: name, arguments, comment and its text as written in the file.")]
     public void ReadsCustomDirective()
     {
         Assert.Multiple(() =>
         {
             Assert.That(Custom.Arguments, Is.EqualTo(Consts.Sections.CustomArguments), "The arguments should be read without quotes");
+            Assert.That(Custom.Comment, Is.EqualTo(Consts.Sections.CustomComment), "The comment after it should be read");
             Assert.That(Custom.Text, Is.EqualTo(Consts.Sections.CustomText), "Its text should be as written, with its odd spacing");
             Assert.That(Server.Directive.Text, Is.EqualTo(Fixture.Read(Consts.Fixtures.Custom).TrimEnd()), "The server's text should be the whole block as written");
         });

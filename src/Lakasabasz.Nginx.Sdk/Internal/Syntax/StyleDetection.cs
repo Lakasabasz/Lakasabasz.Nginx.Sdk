@@ -8,32 +8,55 @@ internal static class StyleDetection
     private const string FourSpaces = "    ";
 
     /// <summary>
-    /// The more common line break among the lines that end with one (LF on a tie, or with none), and the most common
-    /// step of indentation from a block's line to the first directive in it, when the step is spaces only or tabs only
-    /// (four spaces when the file has none).
+    /// The more common line break among the lines that end with one (LF on a tie, or with none); the most common step of
+    /// indentation from a block's line to the first directive in it, when the step is spaces only or tabs only; the most
+    /// common braces of the blocks and the most common number of empty lines before a block that follows another
+    /// directive (the defaults when the file has none).
     /// </summary>
     public static TextStyle Of(string text, SyntaxBlock root)
     {
         var lines = text.Split('\n');
         var terminated = lines.Take(lines.Length - 1).ToList();
         var crlfCount = terminated.Count(line => line.EndsWith("\r", StringComparison.Ordinal));
+        var blocks = BlocksIn(root).ToList();
         return new TextStyle(
             LineBreak: crlfCount > terminated.Count - crlfCount ? Crlf : Lf,
-            Indentation: MostCommon(IndentUnitsIn(root).OfType<string>(), FourSpaces));
+            Indentation: MostCommon(blocks.Select(block => block.IndentUnit).OfType<string>(), FourSpaces),
+            Braces: MostCommon(blocks.Select(block => BracesOf(block.Node)), TextStyle.Default.Braces),
+            BlockSpacing: MostCommon(blocks.Where(block => block.FollowsDirective).Select(block => block.Spacing), TextStyle.Default.BlockSpacing));
     }
 
     /// <summary>
-    /// The step of indentation of every block at any depth: from its line's indentation to that of the first directive
-    /// in it (<see langword="null"/> when that is on the same line, or not a whole number of spaces or tabs).
+    /// How a block is written: on one line when its body is (also with <c>{</c> under its name, and <c>{}</c>), else
+    /// with <c>{</c> on a line of its own or at the end of the line.
     /// </summary>
-    private static IEnumerable<string?> IndentUnitsIn(SyntaxBlock block)
+    public static Braces BracesOf(SyntaxDirective node) => node.Block switch
     {
-        foreach (var line in block.Lines)
+        { IsOneLine: true } => Braces.OneLine,
+        _ when node.BraceOnNewLine => Braces.NewLine,
+        _ => Braces.EndOfLine,
+    };
+
+    /// <summary>
+    /// Every block at any depth, with the empty lines above it (above its comment), whether a directive comes before it
+    /// in its block, and its step of indentation: from its line's indentation to that of the first directive in it
+    /// (<see langword="null"/> when that is on the same line, or not a whole number of spaces or tabs).
+    /// </summary>
+    private static IEnumerable<(SyntaxDirective Node, int Spacing, bool FollowsDirective, string? IndentUnit)> BlocksIn(SyntaxBlock block)
+    {
+        for (var i = 0; i < block.Lines.Count; i++)
         {
+            var line = block.Lines[i];
             foreach (var node in line.Items.Select(item => item.Node).OfType<SyntaxDirective>().Where(node => node.Block is not null))
             {
-                yield return IndentUnitOf(node.Block!, line.Indentation);
-                foreach (var inner in IndentUnitsIn(node.Block!))
+                var commentTop = i;
+                while (commentTop > 0 && block.Lines[commentTop - 1].IsCommentLine)
+                    commentTop--;
+                var spacing = 0;
+                while (commentTop - spacing > 0 && block.Lines[commentTop - spacing - 1].IsBlank)
+                    spacing++;
+                yield return (node, spacing, block.Lines.Take(i).Any(earlier => earlier.HasDirectives), IndentUnitOf(node.Block!, line.Indentation));
+                foreach (var inner in BlocksIn(node.Block!))
                     yield return inner;
             }
         }

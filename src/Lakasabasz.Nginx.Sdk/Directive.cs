@@ -35,10 +35,35 @@ public sealed class Directive
     public string? RawContent => Node.RawContent;
 
     /// <summary>
+    /// The comment of the directive, without <c>#</c> (and the space after it); <see langword="null"/> for none, and
+    /// setting <see langword="null"/> removes it. A simple directive's is one line at the end of its line
+    /// (<c>listen 80; # public</c>); a block's is on the lines right above it, one per line of the text (separated by
+    /// <c>\n</c>). Removing a block removes its comment.
+    /// </summary>
+    /// <exception cref="ArgumentException">A simple directive's comment contains a line break, or a block's a <c>\r</c>.</exception>
+    public string? Comment
+    {
+        get => Node.Comment;
+        set => Node.SetComment(value).OrThrow();
+    }
+
+    /// <summary>
     /// The directive as written in the file when it was loaded (for a block: up to its closing <c>}</c>);
     /// <see langword="null"/> for a directive added in code. Does not follow later changes.
     /// </summary>
     public string? Text => Node.SourceText;
+
+    /// <summary>
+    /// How the block and its content are written (see <see cref="NginxStyle"/>): its braces, the indentation and the
+    /// spacing before the blocks inside it. Setting it rewrites the block's braces; the rest applies to new text in it.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Read or set on a simple directive or a raw block.</exception>
+    /// <exception cref="ArgumentException">The style is not usable, or its line break is not the file's.</exception>
+    public NginxStyle Style
+    {
+        get => StyledBlockOrThrow().EffectiveStyle.ToPublic();
+        set => StyledBlockOrThrow().SetStyle(value.ToInternal().OrThrow()).OrThrow();
+    }
 
     /// <summary>1-based line where the directive starts in the loaded file; 0 for a directive added in code.</summary>
     /// <remarks>Refers to the text as loaded: it does not follow later changes of the file.</remarks>
@@ -48,4 +73,8 @@ public sealed class Directive
     public int Column => Node.Column;
 
     internal StructureDirective Node { get; }
+
+    private StructureBlock StyledBlockOrThrow() => Node.Kind == DirectiveKind.Block
+        ? Node.Block
+        : throw new InvalidOperationException($"{Node.Name} is not a block: only a block has a style.");
 }

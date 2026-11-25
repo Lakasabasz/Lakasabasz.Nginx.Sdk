@@ -31,11 +31,11 @@ internal sealed class SyntaxTree
     public StructureBlock Structure => _binding.Structure;
 
     /// <summary>
-    /// The directives of a piece of nginx text, e.g. the body of a section pasted in code; a syntax error
+    /// The directives and comments of a piece of nginx text, e.g. the body of a section pasted in code; a syntax error
     /// is at a line and column of the text.
     /// </summary>
-    public static Result<List<StructureDirective>, NginxParseError> Fragment(string text) => ConfigParser.Parse(FragmentPath, text)
-        .Map(tree => SyntaxBinding.Fragment(tree.Root));
+    public static Result<List<StructureNode>, NginxParseError> Fragment(string text) => ConfigParser.Parse(FragmentPath, text)
+        .Map(tree => SyntaxBinding.Fragment(tree.Root, StyleDetection.Of(text, tree.Root)));
 
     /// <summary>The file's text: the changes of the structure applied, everything unchanged as it was read.</summary>
     public string Render(int capacity)

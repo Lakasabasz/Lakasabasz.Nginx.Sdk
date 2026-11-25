@@ -149,6 +149,18 @@ public static class Consts
         public const string ListenReplaced = "Sections/names.listen-replaced.conf";
         public const string Custom = "Sections/custom.conf";
         public const string CustomKept = "Sections/custom.kept.conf";
+        public const string Mixed = "Sections/mixed.conf";
+        public const string MixedChanged = "Sections/mixed.changed.conf";
+        public const string MixedRelaid = "Sections/mixed.relaid.conf";
+        public const string MixedRestyled = "Sections/mixed.restyled.conf";
+        public const string MixedOneLineAdded = "Sections/mixed.one-line-added.conf";
+        public const string MixedLooseAdded = "Sections/mixed.loose-added.conf";
+        public const string Spaced = "Sections/spaced.conf";
+        public const string Comments = "Sections/comments.conf";
+        public const string TwoSpaces = "Sections/two-spaces.conf";
+        public const string CommentsChanged = "Sections/comments.changed.conf";
+        public const string CommentsMoved = "Sections/comments.moved.conf";
+        public const string CommentsUnfolded = "Sections/comments.unfolded.conf";
         public const string AttachAdded = "Sections/attach.added.conf";
         public const string AttachChanged = "Sections/attach.changed.conf";
         public const string TextServer = "Sections/text.server.conf";
@@ -399,8 +411,9 @@ public static class Consts
         public static readonly int[] FileSslPorts = [8443];
         public const int ReplacedPort = 8080;
 
-        public const string ServerText = "server_name text.test;\nlisten 8085;\n\nlocation /api\n{\n    proxy_pass http://127.0.0.1:5000;\n}\n";
+        public const string ServerText = "server_name text.test;\nlisten 8085; # from text\n\n# the API\nlocation /api\n{\n    proxy_pass http://127.0.0.1:5000;\n}\n";
         public const string TextName = "text.test";
+        public const string TextComment = "from text";
         public const string BackendUrl = "http://127.0.0.1:5000";
         public const string BackendAddress = "127.0.0.1:5000";
         public const string UpstreamText = "server 127.0.0.1:5000;";
@@ -418,7 +431,30 @@ public static class Consts
 
         public const string CustomDirective = "more_set_headers";
         public static readonly string[] CustomArguments = ["Server: hidden", "X-Custom: on"];
+        public const string CustomComment = "headers-more module";
         public const string CustomText = "more_set_headers   \"Server: hidden\"   \"X-Custom: on\" ;";
+
+        public const int TwoSpaceWidth = 2;
+        public const int NoWidth = 0;
+        public const LineBreak UnknownLineBreak = (LineBreak)7;
+        public const string NoContent = "204";
+
+        public const string FileComment = "Example site\nmanaged by the SDK tests";
+        public const string ServerComment = "main server";
+        public const string NameComment = "the name";
+        public const string StaticComment = "static files\nlocation /old { root /srv/old; }";
+        public const string NewFileComment = "Rewritten header";
+        public const string MixedHeader = "mixed layout";
+        public const string FileCommentOnly = "# Example site\n# managed by the SDK tests\n\n";
+        public const string NewPath = "/new";
+        public const string AddedComment = "a new location\nwith two lines";
+        public const string CarriageReturnComment = "first\r\nsecond";
+        public const int WideSpacing = 2;
+        public const string ListenComment = "public port";
+        public const string LocationComment = "static files";
+        public const string ApiComment = "API";
+        public const string LineComment = "added in code";
+        public const string TwoLineComment = "first\nsecond";
 
         public static readonly string[] Indexes = [IndexHtml, IndexHtm];
         public static readonly string[] Includes = [ProxyHeadersSnippet];
@@ -430,6 +466,11 @@ public static class Consts
         public static readonly string[] SslServerNames = [SslServerName];
         public static readonly string[] MainServerNames = [SslServerName, PlainServerName];
         public static readonly string[] MainUpstreamNames = [UpstreamName, AddedUpstreamName];
+
+        public static readonly Indentation TwoSpaces = Indentation.Spaces(TwoSpaceWidth);
+        public static readonly NginxStyle MixedStyle = new() { LineBreak = LineBreak.CrLf, Indentation = Indentation.Tabs(), Braces = BraceStyle.NewLine, BlockSpacing = 0 };
+        public static readonly NginxStyle RelaidStyle = new() { LineBreak = LineBreak.Lf, Indentation = TwoSpaces, Braces = BraceStyle.EndOfLine, BlockSpacing = 2 };
+        public static readonly NginxStyle TwoSpaceStyle = new() { Indentation = TwoSpaces };
 
         public static string MainIncluding(string site) => $"events {{}}\nhttp {{\n    include {site};\n}}\n";
     }

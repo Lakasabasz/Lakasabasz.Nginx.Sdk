@@ -1,11 +1,11 @@
 namespace Lakasabasz.Nginx.Sdk.Internal.Structure;
 
 /// <summary>
-/// A directive of the internal structure: its name, arguments and block. It holds no formatting: the syntax
+/// A directive of the internal structure: its name, arguments, block and comment. It holds no formatting: the syntax
 /// tree writes the directive. Two texts are kept as given, not written by it: a raw block's body and the directive as
 /// read from a file.
 /// </summary>
-internal sealed class StructureDirective
+internal sealed class StructureDirective : StructureNode
 {
     public StructureDirective(string name, IReadOnlyList<string> arguments, DirectiveKind kind, StructureBlock? block,
         string? rawContent, int line = 0, int column = 0)
@@ -24,8 +24,8 @@ internal sealed class StructureDirective
     public static StructureDirective NewSimple(string name, IReadOnlyList<string> arguments) =>
         new(name, arguments, DirectiveKind.Simple, block: null, rawContent: null);
 
-    /// <summary>A new block directive made in code, holding <paramref name="body"/>.</summary>
-    public static StructureDirective NewBlock(string name, IReadOnlyList<string> arguments, List<StructureDirective> body) =>
+    /// <summary>A new block directive made in code, holding <paramref name="body"/> (directives and comments).</summary>
+    public static StructureDirective NewBlock(string name, IReadOnlyList<string> arguments, List<StructureNode> body) =>
         new(name, arguments, DirectiveKind.Block, new StructureBlock(body), rawContent: null);
 
     public string Name { get; }
@@ -54,8 +54,16 @@ internal sealed class StructureDirective
     /// <summary>The directive as written in the file when it was read; <see langword="null"/> for one added in code.</summary>
     public string? SourceText { get; private set; }
 
+    /// <summary>
+    /// The comment of the directive, without <c>#</c>; <see langword="null"/> for none. A simple directive's is one line,
+    /// at the end of its line; a block's is on the lines right above it, separated by <c>\n</c>.
+    /// </summary>
+    public string? Comment { get; private set; }
+
     /// <summary>Whether the arguments changed since the changes were last taken.</summary>
     public bool ArgumentsChanged { get; private set; }
+
+    public bool CommentChanged { get; private set; }
 
     public void SetArguments(IReadOnlyList<string> arguments)
     {
@@ -63,11 +71,28 @@ internal sealed class StructureDirective
         ArgumentsChanged = true;
     }
 
-    /// <summary>The text of the directive as read from a file: not a change.</summary>
-    public void Read(string? sourceText) => SourceText = sourceText;
+    public Result<StructureDirective, UsageError> SetComment(string? comment)
+    {
+        if ((IsBlock ? StructureComment.CarriageReturnError(comment) : StructureComment.LineBreakError(comment)) is { } error)
+            return Result<StructureDirective, UsageError>.Failure(error);
+        Comment = comment;
+        CommentChanged = true;
+        return Result<StructureDirective, UsageError>.Success(this);
+    }
+
+    /// <summary>The comment and text of the directive as read from a file: not a change.</summary>
+    public void Read(string? comment, string? sourceText)
+    {
+        Comment = comment;
+        SourceText = sourceText;
+    }
 
     /// <summary>Forgets what changed: the changes were taken.</summary>
-    public void AcceptChanges() => ArgumentsChanged = false;
+    public void AcceptChanges()
+    {
+        ArgumentsChanged = false;
+        CommentChanged = false;
+    }
 }
 
 internal enum DirectiveKind
