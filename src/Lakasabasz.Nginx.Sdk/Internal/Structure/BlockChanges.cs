@@ -15,7 +15,10 @@ internal sealed class BlockChanges
     /// <summary>Directives whose comment changed.</summary>
     public List<StructureDirective> CommentChanged { get; } = [];
 
-    /// <summary>Block directives whose style changed.</summary>
+    /// <summary>For a file: whether the comment at its top changed.</summary>
+    public bool OwnCommentChanged { get; init; }
+
+    /// <summary>Block directives whose style was set.</summary>
     public List<StructureDirective> StyleChanged { get; } = [];
 
     /// <summary>Directives and comments added, in order, with everything in them: they go after the last directive of the block.</summary>

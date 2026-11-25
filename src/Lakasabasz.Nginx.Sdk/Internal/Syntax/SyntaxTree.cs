@@ -18,17 +18,14 @@ internal sealed class SyntaxTree
 
     private readonly SyntaxBinding _binding;
 
-    public SyntaxTree(SyntaxBlock root, Formatting formatting)
+    /// <summary>The tree of a file's text, its style read from it.</summary>
+    public SyntaxTree(SyntaxBlock root, string text)
     {
         Root = root;
-        Formatting = formatting;
-        _binding = SyntaxBinding.Bind(root);
+        _binding = SyntaxBinding.Bind(root, StyleDetection.Of(text, root));
     }
 
     public SyntaxBlock Root { get; }
-
-    /// <summary>The line break and indentation unit of the file, for new text.</summary>
-    public Formatting Formatting { get; set; }
 
     /// <summary>The internal structure of the file: its directives, without formatting.</summary>
     public StructureBlock Structure => _binding.Structure;
@@ -41,14 +38,14 @@ internal sealed class SyntaxTree
     {
         var parsed = ConfigParser.Parse(FragmentPath, text);
         return parsed.IsSuccess
-            ? Result<List<StructureNode>, NginxParseError>.Success(SyntaxBinding.Fragment(parsed.Value.Root))
+            ? Result<List<StructureNode>, NginxParseError>.Success(SyntaxBinding.Fragment(parsed.Value.Root, StyleDetection.Of(text, parsed.Value.Root)))
             : Result<List<StructureNode>, NginxParseError>.Failure(parsed.Error);
     }
 
     /// <summary>The file's text: the changes of the structure applied, everything unchanged as it was read.</summary>
     public string Render(int capacity)
     {
-        _binding.Apply(Root, Formatting);
+        _binding.Apply(Root);
         var text = new StringBuilder(capacity);
         Root.Render(text);
         return text.ToString();

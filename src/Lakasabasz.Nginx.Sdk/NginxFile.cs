@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using Lakasabasz.Nginx.Sdk.Internal;
-using Lakasabasz.Nginx.Sdk.Internal.Syntax;
 using Lakasabasz.Nginx.Sdk.Views;
 
 namespace Lakasabasz.Nginx.Sdk;
@@ -61,14 +60,25 @@ public sealed class NginxFile
     }
 
     /// <summary>
-    /// The line break and indentation unit of new and changed text; read from the file, <see cref="NginxLayout.Default"/>
-    /// for a new one. Text that is not changed keeps its own.
+    /// How new and changed text of the file is written (see <see cref="NginxStyle"/>): read from the file, or
+    /// <see cref="NginxStyle.Default"/> for a new one. Text that is not changed keeps its own.
     /// </summary>
-    /// <exception cref="ArgumentException">The line break is not <c>\n</c> or <c>\r\n</c>, or the indentation is not spaces or tabs.</exception>
-    public NginxLayout Layout
+    /// <exception cref="ArgumentException">The style is not usable, e.g. its line break is not <c>\n</c> or <c>\r\n</c>.</exception>
+    public NginxStyle Style
     {
-        get => new() { Newline = _document.Tree.Formatting.Newline, Indentation = _document.Tree.Formatting.IndentUnit };
-        set => _document.Tree.Formatting = Formatting.Create(value.Newline, value.Indentation).OrThrow();
+        get => _document.Tree.Structure.Style;
+        set => _document.Tree.Structure.SetStyle(value).OrThrow();
+    }
+
+    /// <summary>
+    /// The comment at the top of the file, without <c>#</c>, lines separated by <c>\n</c>; it is followed by one empty
+    /// line. <see langword="null"/> for none; setting <see langword="null"/> removes it.
+    /// </summary>
+    /// <exception cref="ArgumentException">The comment contains a <c>\r</c>.</exception>
+    public string? Comment
+    {
+        get => _document.Tree.Structure.Comment;
+        set => _document.Tree.Structure.SetComment(value).OrThrow();
     }
 
     /// <summary>

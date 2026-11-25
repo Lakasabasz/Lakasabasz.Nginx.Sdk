@@ -1,8 +1,8 @@
 namespace Lakasabasz.Nginx.Sdk.Internal.Structure;
 
 /// <summary>
-/// A directive of the internal structure: its name, arguments, block, the comment after it and the style its block
-/// is written in. It holds no text: the style is a choice (one line, brace on a new line), the syntax tree writes it.
+/// A directive of the internal structure: its name, arguments, block and comment. It holds no text: the syntax tree
+/// writes it.
 /// </summary>
 internal sealed class StructureDirective : StructureNode
 {
@@ -13,6 +13,7 @@ internal sealed class StructureDirective : StructureNode
         Arguments = arguments;
         Kind = kind;
         Block = block ?? StructureBlock.OfSimpleDirective();
+        Block.Owner = this;
         RawContent = rawContent;
         Line = line;
         Column = column;
@@ -51,18 +52,16 @@ internal sealed class StructureDirective : StructureNode
     /// <summary>The directive as written in the file when it was read; <see langword="null"/> for one added in code.</summary>
     public string? SourceText { get; private set; }
 
-    /// <summary>The comment after the directive on its line, without <c>#</c>; <see langword="null"/> for none.</summary>
+    /// <summary>
+    /// The comment of the directive, without <c>#</c>; <see langword="null"/> for none. A simple directive's is one line,
+    /// at the end of its line; a block's is on the lines right above it, separated by <c>\n</c>.
+    /// </summary>
     public string? Comment { get; private set; }
-
-    /// <summary>How the block is written: on one line, with <c>{</c> on a line of its own.</summary>
-    public BlockStyle Style { get; private set; } = BlockStyle.Default;
 
     /// <summary>Whether the arguments changed since the changes were last taken.</summary>
     public bool ArgumentsChanged { get; private set; }
 
     public bool CommentChanged { get; private set; }
-
-    public bool StyleChanged { get; private set; }
 
     public void SetArguments(IReadOnlyList<string> arguments)
     {
@@ -72,45 +71,26 @@ internal sealed class StructureDirective : StructureNode
 
     public Result<StructureDirective, UsageError> SetComment(string? comment)
     {
-        if (StructureComment.LineBreakError(comment) is { } error)
+        if ((IsBlock ? StructureComment.CarriageReturnError(comment) : StructureComment.LineBreakError(comment)) is { } error)
             return Result<StructureDirective, UsageError>.Failure(error);
         Comment = comment;
         CommentChanged = true;
         return Result<StructureDirective, UsageError>.Success(this);
     }
 
-    public void SetStyle(BlockStyle style)
-    {
-        Style = style;
-        StyleChanged = true;
-    }
-
-    /// <summary>The comment, style and text of the directive as read from a file: not a change.</summary>
-    public void Read(string? comment, BlockStyle style, string? sourceText)
+    /// <summary>The comment and text of the directive as read from a file: not a change.</summary>
+    public void Read(string? comment, string? sourceText)
     {
         Comment = comment;
-        Style = style;
         SourceText = sourceText;
     }
-
-    /// <summary>The style the block is written in now, e.g. after the tree put it onto lines to hold a block: not a change.</summary>
-    public void NoteWrittenStyle(BlockStyle style) => Style = style;
 
     /// <summary>Forgets what changed: the changes were taken.</summary>
     public void AcceptChanges()
     {
         ArgumentsChanged = false;
         CommentChanged = false;
-        StyleChanged = false;
     }
-}
-
-/// <summary>How a block is written.</summary>
-/// <param name="OneLine">The whole block on one line, e.g. <c>events { worker_connections 64; }</c>.</param>
-/// <param name="BraceOnNewLine">The <c>{</c> on a line of its own, under the directive's name.</param>
-internal sealed record BlockStyle(bool OneLine, bool BraceOnNewLine)
-{
-    public static BlockStyle Default { get; } = new(false, false);
 }
 
 internal enum DirectiveKind

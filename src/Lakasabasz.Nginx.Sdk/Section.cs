@@ -32,19 +32,26 @@ public abstract class Section
     /// <summary>The directives of the block, also those with no property, e.g. of a module outside nginx.</summary>
     public DirectiveCollection Directives => Facades.Of(Node.Block);
 
-    /// <summary>The comment after the block's closing <c>}</c> on its line, without <c>#</c>; <see langword="null"/> for none.</summary>
-    /// <exception cref="ArgumentException">The comment contains a line break.</exception>
+    /// <summary>
+    /// The comment on the lines right above the block, without <c>#</c>, lines separated by <c>\n</c>;
+    /// <see langword="null"/> for none. It is removed and moved together with the block.
+    /// </summary>
+    /// <exception cref="ArgumentException">The comment contains a <c>\r</c>.</exception>
     public string? Comment
     {
         get => Directive.Comment;
         set => Directive.Comment = value;
     }
 
-    /// <summary>How the block is written: on one line, or with <c>{</c> on a line of its own.</summary>
-    public BlockLayout Layout
+    /// <summary>
+    /// How the block and its content are written (see <see cref="NginxStyle"/>). A section made in code takes the style
+    /// of the file or block it is added to, unless one was set on it before.
+    /// </summary>
+    /// <exception cref="ArgumentException">The style is not usable, or its line break is not the file's.</exception>
+    public NginxStyle Style
     {
-        get => Directive.Layout;
-        set => Directive.Layout = value;
+        get => Directive.Style;
+        set => Directive.Style = value;
     }
 
     internal StructureDirective Node { get; }

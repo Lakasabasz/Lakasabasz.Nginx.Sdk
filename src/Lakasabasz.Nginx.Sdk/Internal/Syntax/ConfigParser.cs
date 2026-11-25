@@ -37,7 +37,7 @@ internal sealed partial class ConfigParser
         var parser = new ConfigParser(text);
         try
         {
-            return Result<SyntaxTree, NginxParseError>.Success(new SyntaxTree(parser.ParseFile(), Formatting.Of(text)));
+            return Result<SyntaxTree, NginxParseError>.Success(new SyntaxTree(parser.ParseFile(), text));
         }
         catch (SyntaxError error)
         {

@@ -51,6 +51,12 @@ internal sealed class SyntaxLine
 
     public bool HasDirectives => Items.Any(item => item.Node is SyntaxDirective);
 
+    /// <summary>A line with nothing on it but whitespace.</summary>
+    public bool IsBlank => Items.Count == 0;
+
+    /// <summary>A line holding only a comment.</summary>
+    public bool IsCommentLine => Items is [{ Node: SyntaxComment }];
+
     public void Render(StringBuilder output)
     {
         output.Append(Indentation);
