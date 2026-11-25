@@ -9,8 +9,10 @@ namespace Lakasabasz.Nginx.Sdk.Views;
 /// $host;</c> as the entry <c>Host</c> → <c>$host</c>. Read anew on each use.
 /// </summary>
 /// <remarks>
-/// Setting a key rewrites the first directive with it and removes the others; a new key is added after the last
-/// directive of the block. When the file repeats a key, the first directive gives its value.
+/// Setting a key rewrites the arguments of the first directive with it and removes the others; a new key is added
+/// after the last directive of the block. A directive's name cannot change, so when the key is its name and is set in
+/// another case (<c>TEXT/HTML</c> for <c>text/html</c>), the directive is replaced by a new one at the end. When the
+/// file repeats a key, the first directive gives its value; removing a key removes all of them.
 /// </remarks>
 internal sealed class DirectiveDictionary<TValue>(
     StructureBlock block,
@@ -34,7 +36,7 @@ internal sealed class DirectiveDictionary<TValue>(
         get => TryGetValue(key, out var value) ? value : throw new KeyNotFoundException($"There is no \"{key}\".");
         set
         {
-            var existing = With(key);
+            var existing = DirectivesWith(key);
             var (name, arguments) = write(key, value);
             if (existing.Count == 0 || existing[0].Name != name)
             {
@@ -59,21 +61,21 @@ internal sealed class DirectiveDictionary<TValue>(
 
     public bool Remove(string key)
     {
-        var existing = With(key);
+        var existing = DirectivesWith(key);
         RemoveAll(existing);
         return existing.Count > 0;
     }
 
     public bool Remove(KeyValuePair<string, TValue> item) => Contains(item) && Remove(item.Key);
 
-    public bool ContainsKey(string key) => With(key).Count > 0;
+    public bool ContainsKey(string key) => DirectivesWith(key).Count > 0;
 
     public bool Contains(KeyValuePair<string, TValue> item) =>
         TryGetValue(item.Key, out var value) && EqualityComparer<TValue>.Default.Equals(value, item.Value);
 
     public bool TryGetValue(string key, out TValue value)
     {
-        if (With(key).FirstOrDefault() is { } directive)
+        if (DirectivesWith(key).FirstOrDefault() is { } directive)
         {
             value = read(directive).Value;
             return true;
@@ -94,7 +96,8 @@ internal sealed class DirectiveDictionary<TValue>(
     private List<KeyValuePair<string, TValue>> Entries() =>
         Keys.Select(key => new KeyValuePair<string, TValue>(key, this[key])).ToList();
 
-    private List<StructureDirective> With(string key) => Directives.Where(directive => comparer.Equals(read(directive).Key, key)).ToList();
+    /// <summary>Every directive whose key is <paramref name="key"/>, in order.</summary>
+    private List<StructureDirective> DirectivesWith(string key) => Directives.Where(directive => comparer.Equals(read(directive).Key, key)).ToList();
 
     private void RemoveAll(IEnumerable<StructureDirective> directives)
     {

@@ -29,14 +29,14 @@ internal sealed class ArgumentList(StructureBlock block, string name) : IList<st
         set
         {
             var (directive, position) = Locate(index);
-            Change(directive, arguments => arguments[position] = value);
+            RewriteArguments(directive, arguments => arguments[position] = value);
         }
     }
 
     public void Add(string item)
     {
         if (Directives.LastOrDefault() is { } last)
-            Change(last, arguments => arguments.Add(item));
+            RewriteArguments(last, arguments => arguments.Add(item));
         else
             block.Add(name, [item]).OrThrow();
     }
@@ -50,7 +50,7 @@ internal sealed class ArgumentList(StructureBlock block, string name) : IList<st
         }
 
         var (directive, position) = Locate(index);
-        Change(directive, arguments => arguments.Insert(position, item));
+        RewriteArguments(directive, arguments => arguments.Insert(position, item));
     }
 
     public void RemoveAt(int index)
@@ -59,7 +59,7 @@ internal sealed class ArgumentList(StructureBlock block, string name) : IList<st
         if (directive.Arguments.Count == 1)
             block.Remove(directive).OrThrow();
         else
-            Change(directive, arguments => arguments.RemoveAt(position));
+            RewriteArguments(directive, arguments => arguments.RemoveAt(position));
     }
 
     public bool Remove(string item)
@@ -85,7 +85,8 @@ internal sealed class ArgumentList(StructureBlock block, string name) : IList<st
 
     private List<string> Values() => Directives.SelectMany(directive => directive.Arguments).ToList();
 
-    private static void Change(StructureDirective directive, Action<List<string>> change)
+    /// <summary>Gives the directive its arguments changed by <paramref name="change"/>.</summary>
+    private static void RewriteArguments(StructureDirective directive, Action<List<string>> change)
     {
         var arguments = directive.Arguments.ToList();
         change(arguments);

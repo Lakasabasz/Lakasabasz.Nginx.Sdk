@@ -19,7 +19,8 @@ internal abstract class SectionScope
 
     /// <summary>
     /// The HTTP sections of a whole file: at its top level (a site, a file of <c>conf.d</c>) and inside its <c>http</c>
-    /// block (<c>nginx.conf</c>). New ones go into <c>http</c> when the file has it, else to the top level.
+    /// block (<c>nginx.conf</c>), in place of the <c>http</c> directive itself. New ones go into <c>http</c> when the
+    /// file has it, else to the top level. nginx allows one <c>http</c> block, so the first one is where they go.
     /// </summary>
     public static SectionScope OfFile(StructureBlock root) => new FileScope(root);
 

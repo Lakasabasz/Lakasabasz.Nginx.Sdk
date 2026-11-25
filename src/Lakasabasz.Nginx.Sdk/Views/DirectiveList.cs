@@ -8,7 +8,8 @@ namespace Lakasabasz.Nginx.Sdk.Views;
 /// <c>listen</c> directives of a server as <see cref="Listen"/> values. Read anew on each use.
 /// </summary>
 /// <remarks>
-/// The values are immutable: a value is changed by setting it at its index, which rewrites that directive. New
+/// The values are immutable records, so changing one in place changes nothing: set a new value at its index instead,
+/// which rewrites that directive. New
 /// values are added at the end; inserting before another value is not possible, as directives are only added after
 /// the last directive of the block.
 /// </remarks>
