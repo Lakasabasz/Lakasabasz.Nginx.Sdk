@@ -60,4 +60,6 @@ public static class Expected
     public static string Switched => Fixture.Read(Consts.Fixtures.Switched);
 
     public static string IndexExtended => Fixture.Read(Consts.Fixtures.IndexExtended);
+
+    public static string PropertiesRenamed => Fixture.Read(Consts.Fixtures.PropertiesRenamed);
 }

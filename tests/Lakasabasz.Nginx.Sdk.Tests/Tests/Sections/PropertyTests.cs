@@ -10,7 +10,11 @@ public sealed class PropertyTests : TestTemplate
     #region SetUp
 
     [SetUp]
-    public void LoadProperties() => _file = NginxFile.Load(Arrange.PropertiesConfig());
+    public void LoadProperties()
+    {
+        Arrange.Certificate();
+        _file = NginxFile.Load(Arrange.PropertiesConfig());
+    }
 
     #endregion
 
@@ -21,6 +25,8 @@ public sealed class PropertyTests : TestTemplate
     private Server Server => Http.Servers.Single();
 
     private Location Api => Server.Locations.First();
+
+    private Location LocationOf(Directive location) => Server.Locations.Single(l => l.Directive == location);
 
     private static NginxFile Build()
     {
@@ -90,7 +96,7 @@ public sealed class PropertyTests : TestTemplate
     {
         var file = Build();
 
-        var result = await NginxControl.TestAsync(Arrange.MainConfig(file.Serialize()));
+        var result = await NginxControl.TestAsync(file, WorkDirectory);
 
         Assert.Multiple(() =>
         {
@@ -127,8 +133,8 @@ public sealed class PropertyTests : TestTemplate
             Assert.That(Http.DefaultType, Is.EqualTo(Consts.Sections.DefaultType), "default_type should be read");
             Assert.That(Http.Gzip, Is.True, "gzip should be read");
             Assert.That(Http.Root, Is.EqualTo(Consts.Sections.HtmlRoot), "root should be read");
-            Assert.That(Http.Index, Is.EqualTo(new[] { Consts.Sections.IndexHtml, Consts.Sections.IndexHtm }), "index should be read");
-            Assert.That(Http.Includes, Is.EqualTo(new[] { Consts.Sections.ProxyHeadersSnippet }), "include should be read");
+            Assert.That(Http.Index, Is.EqualTo(Consts.Sections.Indexes), "index should be read");
+            Assert.That(Http.Includes, Is.EqualTo(Consts.Sections.Includes), "include should be read");
             Assert.That(Http.Headers.Single(), Is.EqualTo(new Header(Consts.Sections.FrameOptions, Consts.Sections.Deny) { Always = true }), "add_header should be read");
         });
     }
@@ -139,8 +145,8 @@ public sealed class PropertyTests : TestTemplate
     {
         Assert.Multiple(() =>
         {
-            Assert.That(Server.Names, Is.EqualTo(new[] { Consts.Sections.ExampleName, Consts.Sections.WwwName }), "server_name should be read");
-            Assert.That(Server.Listens, Is.EqualTo(new[] { Consts.Sections.SslListen, Consts.Sections.Ipv6SslListen }), "listen should be read");
+            Assert.That(Server.Names, Is.EqualTo(Consts.Sections.Names), "server_name should be read");
+            Assert.That(Server.Listens, Is.EqualTo(Consts.Sections.Listens), "listen should be read");
             Assert.That(Server.TryFiles, Is.EqualTo(Consts.Sections.TryFiles), "try_files should be read");
         });
     }
@@ -190,7 +196,7 @@ public sealed class PropertyTests : TestTemplate
             Assert.That(Api.Path, Is.EqualTo(Consts.Sections.ApiPath), "The path should be read");
             Assert.That(Api.Modifier, Is.EqualTo(LocationModifier.None), "A prefix location should have no modifier");
             Assert.That(Api.ProxyPass, Is.EqualTo(Consts.Sections.UpstreamUrl), "proxy_pass should be read");
-            Assert.That(Api.LimitExcept?.Methods, Is.EqualTo(new[] { Consts.Sections.Get }), "limit_except should be read");
+            Assert.That(Api.LimitExcept?.Methods, Is.EqualTo(Consts.Sections.LimitedMethods), "limit_except should be read");
             Assert.That(staticFiles.Modifier, Is.EqualTo(LocationModifier.PreferPrefix), "The ^~ modifier should be read");
             Assert.That(staticFiles.Path, Is.EqualTo(Consts.Sections.StaticPath), "The path after the modifier should be read");
             Assert.That(staticFiles.Alias, Is.EqualTo(Consts.Sections.StaticRoot), "alias should be read");
@@ -206,10 +212,45 @@ public sealed class PropertyTests : TestTemplate
         Assert.Multiple(() =>
         {
             Assert.That(upstream.Name, Is.EqualTo(Consts.Sections.UpstreamName), "The upstream's name should be read");
-            Assert.That(upstream.Servers, Is.EqualTo(new[] { Consts.Sections.PrimaryBackend, Consts.Sections.BackupBackend }), "The upstream's servers should be read");
+            Assert.That(upstream.Servers, Is.EqualTo(Consts.Sections.Backends), "The upstream's servers should be read");
             Assert.That(upstream.KeepAlive, Is.EqualTo(Consts.Sections.UpstreamKeepAlive), "keepalive should be read");
             Assert.That(upstream.KeepAliveTimeout, Is.EqualTo(Consts.Sections.UpstreamKeepAliveTimeout), "keepalive_timeout should be read");
             Assert.That(Http.Types?.MimeTypes[Consts.Sections.HtmlType], Is.EqualTo(Consts.Sections.HtmlExtensions), "types should be read");
+        });
+    }
+
+    [Test]
+    [Description("The keys of sections are changed by their properties: a location's path and modifier, an upstream's name, the methods of limit_except; nginx accepts the result.")]
+    public async Task KeysChange()
+    {
+        Api.Path = Consts.Sections.RenamedPath;
+        Server.Locations.Last().Modifier = LocationModifier.None;
+        Http.Upstreams.Single().Name = Consts.Sections.RenamedUpstream;
+        Api.ProxyPass = Consts.Sections.RenamedUpstreamUrl;
+        Api.LimitExcept!.Methods = Consts.Sections.RenamedMethods;
+
+        var result = await NginxControl.TestAsync(_file, WorkDirectory);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Api.Path, Is.EqualTo(Consts.Sections.RenamedPath), "The new path should be read");
+            Assert.That(Server.Locations.Last().Path, Is.EqualTo(Consts.Sections.StaticPath), "Changing the modifier should keep the path");
+            Assert.That(_file.Serialize(), Is.EqualTo(Expected.PropertiesRenamed), "Only the keys should change");
+            Assert.That(result.Success, Is.True, Consts.Messages.NginxRejected(result));
+        });
+    }
+
+    [Test]
+    [Description("A modifier written together with the path, e.g. location =/exact or location ~\\.php$, is read apart from it.")]
+    public void ReadsGluedModifiers()
+    {
+        var exact = LocationOf(Server.Directives.AddBlock(Consts.Sections.LocationBlock, Consts.Sections.GluedExact));
+        var regex = LocationOf(Server.Directives.AddBlock(Consts.Sections.LocationBlock, Consts.Sections.GluedRegex));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((exact.Modifier, exact.Path), Is.EqualTo((LocationModifier.Exact, Consts.Sections.ExactPath)), "=/exact should be an exact location");
+            Assert.That((regex.Modifier, regex.Path), Is.EqualTo((LocationModifier.Regex, Consts.Sections.RegexPath)), "A glued ~ should be a regex location");
         });
     }
 

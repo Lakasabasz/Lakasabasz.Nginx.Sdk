@@ -20,11 +20,11 @@ public sealed class TextTests : TestTemplate
     {
         var server = _site.Servers.AddFromText(Consts.Sections.ServerText);
 
-        var result = await NginxControl.TestAsync(Arrange.MainConfig(_site.Serialize()));
+        var result = await NginxControl.TestAsync(_site, WorkDirectory);
 
         Assert.Multiple(() =>
         {
-            Assert.That(server.Names, Is.EqualTo(new[] { Consts.Sections.TextName }), "The server's names should come from the text");
+            Assert.That(server.Names, Is.EqualTo(Consts.Sections.TextNames), "The server's names should come from the text");
             Assert.That(server.Locations.Single().ProxyPass, Is.EqualTo(Consts.Sections.BackendUrl), "The location of the text should be read");
             Assert.That(server.Directives.Single(d => d.Name == Consts.Sections.Listen).Comment, Is.EqualTo(Consts.Sections.TextComment), "The comment after listen should be kept");
             Assert.That(server.Directive.Line, Is.Zero, "A server added from text has no line in the file");

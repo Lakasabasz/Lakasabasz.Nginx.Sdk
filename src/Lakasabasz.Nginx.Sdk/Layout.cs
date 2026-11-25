@@ -9,7 +9,10 @@ public sealed record BlockLayout
     /// <summary>The usual layout: <c>{</c> at the end of the line, each directive on a line of its own.</summary>
     public static BlockLayout Default { get; } = new();
 
-    /// <summary>The whole block on one line, e.g. <c>location /health { return 204; }</c>. Not used for a block holding a block or a comment.</summary>
+    /// <summary>
+    /// The whole block on one line, e.g. <c>location /health { return 204; }</c>. A block holding a block or a comment
+    /// is written on lines: adding one to a block on one line puts it onto lines, and its layout says so.
+    /// </summary>
     public bool OneLine { get; init; }
 
     /// <summary>The <c>{</c> on a line of its own, under the block's name.</summary>

@@ -11,7 +11,8 @@ namespace Lakasabasz.Nginx.Sdk;
 /// <list type="bullet">
 /// <item><see cref="Add"/> and <see cref="AddBlock"/> append after the last directive, on a new line indented like
 /// the previous directive (in an empty block: one level deeper than the block, with the file's indentation unit, a
-/// tab or four spaces). In a block written on one line (<c>server { listen 80; }</c>) they stay on that line.</item>
+/// tab or four spaces). In a block written on one line (<c>server { listen 80; }</c>) a simple directive stays on that line; a block
+/// or a comment puts the block onto lines first.</item>
 /// <item><see cref="Remove(Directive)"/> removes the directive's line: its indentation, the directive, a comment
 /// after it on the same line and the line break. The other directives of that line, if any, stay.</item>
 /// <item><see cref="AddComment"/> appends a comment on a line of its own, like a directive.</item>

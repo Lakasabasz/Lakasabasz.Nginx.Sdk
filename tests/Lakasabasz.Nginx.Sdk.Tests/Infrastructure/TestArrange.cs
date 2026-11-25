@@ -101,43 +101,27 @@ public sealed class TestArrange(string configRoot, Func<string> workDirectory)
 
     public string NamesConfig() => Copy(Consts.Fixtures.Names);
 
-    public string MainConfig(string content)
+    public void Certificate()
     {
-        WriteCertificate();
-        var directory = workDirectory();
-        if (content.Contains(Consts.Sections.HttpBlockStart, StringComparison.Ordinal))
-            return WriteWork(Consts.Sections.MainFile, content);
-        var site = WriteWork(Consts.Sections.SiteFile, content);
-        return WriteWork(Consts.Sections.MainFile, Consts.Sections.MainIncluding(Path.Combine(directory, Consts.Sections.SiteFile)));
-    }
-
-    public string PlainEnabledSite() => WriteConfig(Consts.Files.PlainEnabledSite, Consts.Files.PlainEnabledContent);
-
-    private static void WriteCertificate()
-    {
-        if (File.Exists(Consts.Sections.CertificateKey))
+        if (Directory.Exists(Consts.Sections.CertificateDirectory))
             return;
-        Directory.CreateDirectory(Consts.Sections.CertificateDirectory);
+        var staging = Directory.CreateDirectory(Path.Combine(workDirectory(), Consts.Sections.CertificateStaging)).FullName;
         using var key = RSA.Create(Consts.Sections.KeySize);
         var request = new CertificateRequest(Consts.Sections.CertificateSubject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
-        WriteAtomically(Consts.Sections.Certificate, certificate.ExportCertificatePem());
-        WriteAtomically(Consts.Sections.CertificateKey, key.ExportRSAPrivateKeyPem());
+        File.WriteAllText(Path.Combine(staging, Consts.Sections.CertificateFile), certificate.ExportCertificatePem());
+        File.WriteAllText(Path.Combine(staging, Consts.Sections.CertificateKeyFile), key.ExportRSAPrivateKeyPem());
+        try
+        {
+            Directory.Move(staging, Consts.Sections.CertificateDirectory);
+        }
+        catch (IOException) when (Directory.Exists(Consts.Sections.CertificateDirectory))
+        {
+            Directory.Delete(staging, recursive: true);
+        }
     }
 
-    private static void WriteAtomically(string path, string content)
-    {
-        var temporary = path + Guid.NewGuid().ToString(Consts.Formats.CompactGuid);
-        File.WriteAllText(temporary, content);
-        File.Move(temporary, path, overwrite: true);
-    }
-
-    private string WriteWork(string name, string content)
-    {
-        var path = Path.Combine(workDirectory(), name);
-        File.WriteAllText(path, content);
-        return path;
-    }
+    public string PlainEnabledSite() => WriteConfig(Consts.Files.PlainEnabledSite, Consts.Files.PlainEnabledContent);
 
     private string Copy(string fixture)
     {

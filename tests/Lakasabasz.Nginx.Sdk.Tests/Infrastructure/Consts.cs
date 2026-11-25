@@ -141,6 +141,7 @@ public static class Consts
 
         public const string Properties = "Sections/properties.conf";
         public const string PropertiesRemoved = "Sections/properties.removed.conf";
+        public const string PropertiesRenamed = "Sections/properties.renamed.conf";
         public const string Names = "Sections/names.conf";
         public const string NamesChanged = "Sections/names.changed.conf";
         public const string ListenReplaced = "Sections/names.listen-replaced.conf";
@@ -305,6 +306,9 @@ public static class Consts
         public const string HttpBlockStart = "http {";
 
         public const string CertificateDirectory = "/tmp/nginx-sdk-tests/certs";
+        public const string CertificateStaging = "certs";
+        public const string CertificateFile = "fullchain.pem";
+        public const string CertificateKeyFile = "privkey.pem";
         public const string Certificate = "/tmp/nginx-sdk-tests/certs/fullchain.pem";
         public const string CertificateKey = "/tmp/nginx-sdk-tests/certs/privkey.pem";
         public const string CertificateSubject = "CN=example.test";
@@ -335,6 +339,15 @@ public static class Consts
         public const string HtmlRoot = "/var/www/html";
         public const string IndexHtml = "index.html";
         public const string IndexHtm = "index.htm";
+
+        public const string RenamedPath = "/v2";
+        public const string RenamedUpstream = "api_backend";
+        public const string RenamedUpstreamUrl = "http://api_backend";
+        public static readonly string[] RenamedMethods = ["GET", "POST"];
+        public const string GluedExact = "=/exact";
+        public const string ExactPath = "/exact";
+        public const string GluedRegex = "~\\.php$";
+        public const string RegexPath = "\\.php$";
         public const string ProxyHeadersSnippet = "/etc/nginx/snippets/proxy-headers.conf";
         public const string FrameOptions = "X-Frame-Options";
         public const string Deny = "deny";
@@ -420,6 +433,14 @@ public static class Consts
         public const string ApiComment = "API";
         public const string LineComment = "added in code";
         public const string TwoLineComment = "first\nsecond";
+
+        public static readonly string[] Indexes = [IndexHtml, IndexHtm];
+        public static readonly string[] Includes = [ProxyHeadersSnippet];
+        public static readonly string[] Names = [ExampleName, WwwName];
+        public static readonly Listen[] Listens = [SslListen, Ipv6SslListen];
+        public static readonly string[] LimitedMethods = [Get];
+        public static readonly UpstreamServer[] Backends = [PrimaryBackend, BackupBackend];
+        public static readonly string[] TextNames = [TextName];
 
         public static string MainIncluding(string site) => $"events {{}}\nhttp {{\n    include {site};\n}}\n";
     }

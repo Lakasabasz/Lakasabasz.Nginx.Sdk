@@ -34,7 +34,7 @@ public sealed class AttachTests : TestTemplate
         var server = LooseServer();
 
         var added = _site.Servers.Add(server);
-        var result = await NginxControl.TestAsync(Arrange.MainConfig(_site.Serialize()));
+        var result = await NginxControl.TestAsync(_site, WorkDirectory);
 
         Assert.Multiple(() =>
         {

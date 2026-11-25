@@ -47,7 +47,7 @@ public sealed class StyleSwitchTests : TestTemplate
 
     private async Task AssertSwitchedAsync(string read)
     {
-        var result = await NginxControl.TestAsync(Arrange.MainConfig(_site.Serialize()));
+        var result = await NginxControl.TestAsync(_site, WorkDirectory);
 
         Assert.Multiple(() =>
         {
@@ -140,8 +140,8 @@ public sealed class StyleSwitchTests : TestTemplate
 
         Assert.Multiple(() =>
         {
-            Assert.That(fromDirectives.Index, Is.EqualTo(new[] { Consts.Sections.IndexHtml, Consts.Sections.IndexHtm }), "The index of generic directives should be extended");
-            Assert.That(fromText.Index, Is.EqualTo(new[] { Consts.Sections.IndexHtml, Consts.Sections.IndexHtm }), "The index of the text should be extended");
+            Assert.That(fromDirectives.Index, Is.EqualTo(Consts.Sections.Indexes), "The index of generic directives should be extended");
+            Assert.That(fromText.Index, Is.EqualTo(Consts.Sections.Indexes), "The index of the text should be extended");
             Assert.That(_site.Serialize(), Is.EqualTo(Expected.IndexExtended), "Both index lines should hold the added file");
         });
     }

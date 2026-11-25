@@ -84,6 +84,9 @@ internal sealed class StructureDirective : StructureNode
         SourceText = sourceText;
     }
 
+    /// <summary>The style the block is written in now, e.g. after it was put onto lines to hold a block: not a change.</summary>
+    public void ReadStyle(BlockStyle style) => Style = style;
+
     /// <summary>Forgets what changed: the changes were taken.</summary>
     public void AcceptChanges()
     {

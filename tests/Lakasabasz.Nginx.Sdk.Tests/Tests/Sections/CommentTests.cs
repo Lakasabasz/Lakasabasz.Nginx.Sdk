@@ -44,7 +44,7 @@ public sealed class CommentTests : TestTemplate
         Server.Locations.Last().Comment = Consts.Sections.LocationComment;
         Server.Locations.Add(Consts.Sections.ApiPath).Comment = Consts.Sections.ApiComment;
 
-        var result = await NginxControl.TestAsync(Arrange.MainConfig(_file.Serialize()));
+        var result = await NginxControl.TestAsync(_file, WorkDirectory);
 
         Assert.Multiple(() =>
         {
@@ -60,11 +60,12 @@ public sealed class CommentTests : TestTemplate
         Server.Directives.AddComment(Consts.Sections.LineComment);
         Server.Locations.First().Directives.AddComment(Consts.Sections.LineComment);
 
-        var result = await NginxControl.TestAsync(Arrange.MainConfig(_file.Serialize()));
+        var result = await NginxControl.TestAsync(_file, WorkDirectory);
 
         Assert.Multiple(() =>
         {
             Assert.That(_file.Serialize(), Is.EqualTo(Expected.MixedCommentLines), "Each comment should be on a line of its own");
+            Assert.That(Server.Locations.First().Layout.OneLine, Is.False, "The block on one line should be on lines now");
             Assert.That(result.Success, Is.True, Consts.Messages.NginxRejected(result));
         });
     }

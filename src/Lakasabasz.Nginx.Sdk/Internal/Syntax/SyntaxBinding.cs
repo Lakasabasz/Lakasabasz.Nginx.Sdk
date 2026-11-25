@@ -93,12 +93,14 @@ internal sealed class SyntaxBinding
             var indentation = block.IndentationOf(node);
             node.Header = node.Header.TrimEnd() + BraceSpacing(directive.Style, formatting, indentation);
             node.Block?.Restyle(directive.Style.OneLine, formatting, indentation);
+            KeepStyle(directive, node);
         }
 
         foreach (var (directive, nested) in changes.Nested)
         {
             var node = _nodes[directive];
             Apply(node.Block!, nested, formatting, block.IndentationOf(node));
+            KeepStyle(directive, node);
         }
 
         AddAll(block, changes.Added, formatting, ownerIndentation, block.HoldsBlock);
@@ -155,7 +157,18 @@ internal sealed class SyntaxBinding
         _nodes[directive] = node;
         if (block is not null)
             AddAll(block, directive.Block.Nodes, formatting, blockOnOneLine ? string.Empty : indentation, holdsBlock: false);
+        KeepStyle(directive, node);
         return node;
+    }
+
+    /// <summary>
+    /// The structure learns that its block is not on one line, when the block could not be or no longer is: one holding
+    /// a block or a comment is written on lines.
+    /// </summary>
+    private static void KeepStyle(StructureDirective directive, SyntaxDirective node)
+    {
+        if (directive.Style.OneLine && node.Block is { IsOneLine: false })
+            directive.ReadStyle(directive.Style with { OneLine = false });
     }
 
     private void Forget(StructureDirective directive)

@@ -22,7 +22,7 @@ public sealed class LayoutTests : TestTemplate
 
     private Location MultiLine => Server.Locations.Last();
 
-    private Task<NginxProcessResult> NginxTestAsync() => NginxControl.TestAsync(Arrange.MainConfig(_file.Serialize()));
+    private Task<NginxProcessResult> NginxTestAsync() => NginxControl.TestAsync(_file, WorkDirectory);
 
     #endregion
 
