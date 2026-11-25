@@ -139,6 +139,27 @@ public static class Consts
         public const string CrlfAdded = "Directives/crlf.added.conf";
         public const string Values = "Directives/values.conf";
 
+        public const string Properties = "Sections/properties.conf";
+        public const string PropertiesRemoved = "Sections/properties.removed.conf";
+        public const string Names = "Sections/names.conf";
+        public const string NamesChanged = "Sections/names.changed.conf";
+        public const string ListenReplaced = "Sections/names.listen-replaced.conf";
+        public const string Custom = "Sections/custom.conf";
+        public const string CustomKept = "Sections/custom.kept.conf";
+        public const string Mixed = "Sections/mixed.conf";
+        public const string MixedChanged = "Sections/mixed.changed.conf";
+        public const string MixedRelaid = "Sections/mixed.relaid.conf";
+        public const string MixedRestyled = "Sections/mixed.restyled.conf";
+        public const string MixedOneLineAdded = "Sections/mixed.one-line-added.conf";
+        public const string MixedCommented = "Sections/mixed.commented.conf";
+        public const string MixedCommentLines = "Sections/mixed.comment-lines.conf";
+        public const string AttachAdded = "Sections/attach.added.conf";
+        public const string AttachChanged = "Sections/attach.changed.conf";
+        public const string TextServer = "Sections/text.server.conf";
+        public const string TextLocationAndUpstream = "Sections/text.location-upstream.conf";
+        public const string Switched = "Sections/switched.conf";
+        public const string IndexExtended = "Sections/index.extended.conf";
+
         public const string ValuesTarget = "conf.d/values.conf";
 
         public const string BrokenDirectory = "broken";
@@ -275,6 +296,134 @@ public static class Consts
         public const string BuddyActionRunHash = "BUDDY_ACTION_RUN_HASH";
     }
 
+    public static class Sections
+    {
+        public const string SiteName = "sections-site";
+        public const string OtherSiteName = "sections-other";
+        public const string MainFile = "main.conf";
+        public const string SiteFile = "site.conf";
+        public const string HttpBlockStart = "http {";
+
+        public const string CertificateDirectory = "/tmp/nginx-sdk-tests/certs";
+        public const string Certificate = "/tmp/nginx-sdk-tests/certs/fullchain.pem";
+        public const string CertificateKey = "/tmp/nginx-sdk-tests/certs/privkey.pem";
+        public const string CertificateSubject = "CN=example.test";
+        public const int KeySize = 2048;
+
+        public const string ServerBlock = "server";
+        public const string LocationBlock = "location";
+        public const string Listen = "listen";
+        public const string ServerName = "server_name";
+        public const string Index = "index";
+        public const string ProxyPass = "proxy_pass";
+        public const string Return = "return";
+        public const string ClientMaxBodySize = "client_max_body_size";
+        public const string SizeVariable = "$body_limit";
+
+        public const string AttachName = "attach.test";
+        public const string AttachAlias = "www.attach.test";
+        public const int AttachPort = 8084;
+        public const string RootPath = "/";
+        public const string WebRoot = "/var/www";
+        public const string OtherWebRoot = "/srv/www";
+
+        public const int WorkerConnections = 512;
+        public const string EventMethod = "epoll";
+        public static readonly TimeSpan KeepAliveTimeout = TimeSpan.FromSeconds(65);
+        public static readonly Size BodySize = Size.FromMegabytes(50);
+        public const string DefaultType = "application/octet-stream";
+        public const string HtmlRoot = "/var/www/html";
+        public const string IndexHtml = "index.html";
+        public const string IndexHtm = "index.htm";
+        public const string ProxyHeadersSnippet = "/etc/nginx/snippets/proxy-headers.conf";
+        public const string FrameOptions = "X-Frame-Options";
+        public const string Deny = "deny";
+        public const string All = "all";
+        public const string HostHeader = "Host";
+        public const string HostHeaderLowerCase = "host";
+        public const string HostVariable = "$host";
+        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
+        public static readonly TimeSpan ReadTimeout = TimeSpan.FromMinutes(2);
+        public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(30);
+        public const string HttpVersion = "1.1";
+        public const string HtmlType = "text/html";
+        public static readonly IReadOnlyList<string> HtmlExtensions = ["html", "htm"];
+        public const string UpstreamName = "backend";
+        public static readonly UpstreamServer PrimaryBackend = new("127.0.0.1:5000") { Weight = 2, MaxFails = 3, FailTimeout = TimeSpan.FromSeconds(30) };
+        public static readonly UpstreamServer BackupBackend = new("127.0.0.1:5001") { Backup = true };
+        public const int UpstreamKeepAlive = 16;
+        public static readonly TimeSpan UpstreamKeepAliveTimeout = TimeSpan.FromMinutes(1);
+        public const string ExampleName = "example.test";
+        public const string WwwName = "www.example.test";
+        public static readonly Listen SslListen = new() { Port = 443, Ssl = true, DefaultServer = true };
+        public static readonly Listen Ipv6SslListen = new() { Address = "[::]", Port = 443, Ssl = true };
+        public static readonly string[] TryFiles = ["$uri", "$uri/", "=404"];
+        public const string Ciphers = "HIGH:!aNULL:!MD5";
+        public const string SessionCache = "shared:SSL:10m";
+        public static readonly TimeSpan SessionTimeout = TimeSpan.FromDays(1);
+        public const string ApiPath = "/api";
+        public const string UpstreamUrl = "http://backend";
+        public const string Get = "GET";
+        public const string StaticPath = "/static/";
+        public const string StaticRoot = "/var/www/static/";
+
+        public static readonly string[] FileNames = ["first.test", "*.example.test", "second.test"];
+        public const string WildcardName = "*.example.test";
+        public const string MatchedByWildcard = "a.example.test";
+        public const string AddedName = "added.test";
+        public const string FirstLineName = "first.test";
+        public const string RenamedName = "renamed.test";
+        public static readonly Listen[] FileListens =
+        [
+            new() { Port = 80 },
+            new() { Address = "127.0.0.1", Port = 8443, Ssl = true, Http2 = true },
+            new() { Address = "[::]", Port = 8443, Ssl = true },
+            new() { Address = "localhost" },
+            new() { Address = "unix:/run/site.sock" },
+        ];
+        public static readonly int[] FilePorts = [80, 8443];
+        public static readonly int[] FileSslPorts = [8443];
+        public const int ReplacedPort = 8080;
+
+        public const string ServerText = "server_name text.test;\nlisten 8085; # from text\n\n# the API\nlocation /api\n{\n    proxy_pass http://127.0.0.1:5000;\n}\n";
+        public const string TextName = "text.test";
+        public const string TextComment = "from text";
+        public const string BackendUrl = "http://127.0.0.1:5000";
+        public const string BackendAddress = "127.0.0.1:5000";
+        public const string UpstreamText = "server 127.0.0.1:5000;";
+        public const string HealthPath = "/health";
+        public const string LocationText = "return 204;";
+        public const string BrokenText = "listen 80;\nserver_name broken.test\n}\n";
+        public static readonly (int Line, int Column) BrokenTextPosition = (3, 1);
+        public const string BrokenTextMessage = "unexpected \"}\"";
+
+        public const int SwitchPort = 8086;
+        public const string SwitchListen = "8086";
+        public const string SwitchName = "switch.test";
+        public const string SwitchText = "listen 8086;\nserver_name switch.test;\nindex index.html;\n";
+        public const string ApiText = "proxy_pass http://127.0.0.1:5000;";
+
+        public const string CustomDirective = "more_set_headers";
+        public static readonly string[] CustomArguments = ["Server: hidden", "X-Custom: on"];
+        public const string CustomComment = "headers-more module";
+        public const string CustomText = "more_set_headers   \"Server: hidden\"   \"X-Custom: on\" ;";
+
+        public const string Crlf = "\r\n";
+        public const string Lf = "\n";
+        public const string Tab = "\t";
+        public const string TwoSpaces = "  ";
+        public const string NoContent = "204";
+
+        public const string MixedComment = "spaced comment";
+        public const string ListenComment = "public port";
+        public const string LocationComment = "static files";
+        public const string ApiComment = "API";
+        public const string LineComment = "added in code";
+        public const string TwoLineComment = "first\nsecond";
+
+        public static string MainIncluding(string site) => $"events {{}}\nhttp {{\n    include {site};\n}}\n";
+    }
+
     public static class Formats
     {
         public const string CompactGuid = "N";
@@ -384,6 +533,8 @@ public static class Consts
             $"{test}: {explanation?.ReplaceLineEndings(" ")}\n";
 
         public static string Violation(string file, int line, string text) => $"{file}:{line}: {text}";
+
+        public static string NginxRejected(object result) => $"nginx -t should accept the generated config: {result}";
 
         public static string TypeWithBase(Type type) => $"{type.FullName} : {type.BaseType?.FullName}";
 

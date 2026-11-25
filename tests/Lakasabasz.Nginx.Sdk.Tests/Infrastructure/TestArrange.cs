@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+
 namespace Lakasabasz.Nginx.Sdk.Tests.Infrastructure;
 
 public sealed class TestArrange(string configRoot, Func<string> workDirectory)
@@ -90,7 +93,51 @@ public sealed class TestArrange(string configRoot, Func<string> workDirectory)
         return link;
     }
 
+    public string PropertiesConfig() => Copy(Consts.Fixtures.Properties);
+
+    public string MixedConfig() => Copy(Consts.Fixtures.Mixed);
+
+    public string CustomConfig() => Copy(Consts.Fixtures.Custom);
+
+    public string NamesConfig() => Copy(Consts.Fixtures.Names);
+
+    public string MainConfig(string content)
+    {
+        WriteCertificate();
+        var directory = workDirectory();
+        if (content.Contains(Consts.Sections.HttpBlockStart, StringComparison.Ordinal))
+            return WriteWork(Consts.Sections.MainFile, content);
+        var site = WriteWork(Consts.Sections.SiteFile, content);
+        return WriteWork(Consts.Sections.MainFile, Consts.Sections.MainIncluding(Path.Combine(directory, Consts.Sections.SiteFile)));
+    }
+
     public string PlainEnabledSite() => WriteConfig(Consts.Files.PlainEnabledSite, Consts.Files.PlainEnabledContent);
+
+    private static void WriteCertificate()
+    {
+        if (File.Exists(Consts.Sections.CertificateKey))
+            return;
+        Directory.CreateDirectory(Consts.Sections.CertificateDirectory);
+        using var key = RSA.Create(Consts.Sections.KeySize);
+        var request = new CertificateRequest(Consts.Sections.CertificateSubject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+        WriteAtomically(Consts.Sections.Certificate, certificate.ExportCertificatePem());
+        WriteAtomically(Consts.Sections.CertificateKey, key.ExportRSAPrivateKeyPem());
+    }
+
+    private static void WriteAtomically(string path, string content)
+    {
+        var temporary = path + Guid.NewGuid().ToString(Consts.Formats.CompactGuid);
+        File.WriteAllText(temporary, content);
+        File.Move(temporary, path, overwrite: true);
+    }
+
+    private string WriteWork(string name, string content)
+    {
+        var path = Path.Combine(workDirectory(), name);
+        File.WriteAllText(path, content);
+        return path;
+    }
 
     private string Copy(string fixture)
     {

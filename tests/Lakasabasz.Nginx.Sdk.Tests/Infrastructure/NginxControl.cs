@@ -4,6 +4,9 @@ public static class NginxControl
 {
     public static Task<NginxProcessResult> TestAsync() => SudoNginxAsync(Consts.NginxOutput.TestOption);
 
+    public static Task<NginxProcessResult> TestAsync(string mainConfig) =>
+        SudoNginxAsync(Consts.NginxOutput.TestOption, Consts.NginxOutput.ConfigOption, mainConfig);
+
     public static async Task ReloadAsync()
     {
         var result = await SudoNginxAsync(Consts.Arguments.Signal, Consts.Arguments.Reload);
