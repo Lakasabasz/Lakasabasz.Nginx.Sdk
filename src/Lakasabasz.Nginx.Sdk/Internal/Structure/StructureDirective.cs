@@ -1,6 +1,10 @@
 namespace Lakasabasz.Nginx.Sdk.Internal.Structure;
 
-/// <summary>A directive of the internal structure: its name, arguments and block, without any formatting.</summary>
+/// <summary>
+/// A directive of the internal structure: its name, arguments and block. It holds no formatting: the syntax
+/// tree writes the directive. Two texts are kept as given, not written by it: a raw block's body and the directive as
+/// read from a file.
+/// </summary>
 internal sealed class StructureDirective
 {
     public StructureDirective(string name, IReadOnlyList<string> arguments, DirectiveKind kind, StructureBlock? block,
@@ -9,11 +13,20 @@ internal sealed class StructureDirective
         Name = name;
         Arguments = arguments;
         Kind = kind;
-        Block = block ?? StructureBlock.NotABlock();
+        Block = block ?? StructureBlock.OfSimpleDirective();
+        Block.Owner = this;
         RawContent = rawContent;
         Line = line;
         Column = column;
     }
+
+    /// <summary>A new simple directive, e.g. <c>listen 80;</c>, made in code.</summary>
+    public static StructureDirective NewSimple(string name, IReadOnlyList<string> arguments) =>
+        new(name, arguments, DirectiveKind.Simple, block: null, rawContent: null);
+
+    /// <summary>A new block directive made in code, holding <paramref name="body"/>.</summary>
+    public static StructureDirective NewBlock(string name, IReadOnlyList<string> arguments, List<StructureDirective> body) =>
+        new(name, arguments, DirectiveKind.Block, new StructureBlock(body), rawContent: null);
 
     public string Name { get; }
 
@@ -21,17 +34,25 @@ internal sealed class StructureDirective
 
     public DirectiveKind Kind { get; }
 
+    /// <summary>Whether the directive has a body in braces: a block, or a raw block.</summary>
     public bool IsBlock => Kind != DirectiveKind.Simple;
 
     /// <summary>The directives inside the block; empty and not changeable for a simple directive or a raw block.</summary>
     public StructureBlock Block { get; }
 
+    /// <summary>The block this directive is in; <see langword="null"/> for a directive not added anywhere (yet) or removed.</summary>
+    public StructureBlock? Parent { get; set; }
+
+    /// <summary>The body of a raw block (e.g. Lua code) between its braces, kept as written; <see langword="null"/> otherwise.</summary>
     public string? RawContent { get; }
 
     /// <summary>Where the directive starts in the file as read; 0 for a directive added in code.</summary>
     public int Line { get; }
 
     public int Column { get; }
+
+    /// <summary>The directive as written in the file when it was read; <see langword="null"/> for one added in code.</summary>
+    public string? SourceText { get; private set; }
 
     /// <summary>Whether the arguments changed since the changes were last taken.</summary>
     public bool ArgumentsChanged { get; private set; }
@@ -42,13 +63,21 @@ internal sealed class StructureDirective
         ArgumentsChanged = true;
     }
 
-    /// <summary>Forgets that the arguments changed: the change was taken.</summary>
-    public void AcceptArguments() => ArgumentsChanged = false;
+    /// <summary>The text of the directive as read from a file: not a change.</summary>
+    public void Read(string? sourceText) => SourceText = sourceText;
+
+    /// <summary>Forgets what changed: the changes were taken.</summary>
+    public void AcceptChanges() => ArgumentsChanged = false;
 }
 
 internal enum DirectiveKind
 {
+    /// <summary>Ends with <c>;</c>, e.g. <c>listen 80;</c>.</summary>
     Simple,
+
+    /// <summary>A block of directives, e.g. <c>server { … }</c>.</summary>
     Block,
+
+    /// <summary>A block whose body is kept as text, not directives, e.g. <c>content_by_lua_block { … }</c>.</summary>
     Raw,
 }

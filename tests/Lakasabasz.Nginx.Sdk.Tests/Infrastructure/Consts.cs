@@ -139,6 +139,14 @@ public static class Consts
         public const string CrlfAdded = "Directives/crlf.added.conf";
         public const string Values = "Directives/values.conf";
 
+        public const string Main = "Sections/main.conf";
+        public const string MainAdded = "Sections/main.added.conf";
+        public const string Custom = "Sections/custom.conf";
+        public const string AttachAdded = "Sections/attach.added.conf";
+        public const string AttachChanged = "Sections/attach.changed.conf";
+        public const string TextServer = "Sections/text.server.conf";
+        public const string TextLocationAndUpstream = "Sections/text.location-upstream.conf";
+
         public const string ValuesTarget = "conf.d/values.conf";
 
         public const string BrokenDirectory = "broken";
@@ -275,6 +283,71 @@ public static class Consts
         public const string BuddyActionRunHash = "BUDDY_ACTION_RUN_HASH";
     }
 
+    public static class Sections
+    {
+        public const string SiteName = "sections-site";
+        public const string OtherSiteName = "sections-other";
+        public const string MainFile = "main.conf";
+        public const string SiteFile = "site.conf";
+        public const string HttpBlockStart = "http {";
+
+        public const string CertificateDirectory = "/tmp/nginx-sdk-tests/certs";
+        public const string CertificateStaging = "certs";
+        public const string CertificateFile = "fullchain.pem";
+        public const string CertificateKeyFile = "privkey.pem";
+        public const string Certificate = "/tmp/nginx-sdk-tests/certs/fullchain.pem";
+        public const string CertificateKey = "/tmp/nginx-sdk-tests/certs/privkey.pem";
+        public const string CertificateSubject = "CN=example.test";
+        public const int KeySize = 2048;
+
+        public const string Listen = "listen";
+        public const string ServerName = "server_name";
+        public const string ProxyPass = "proxy_pass";
+        public const string Return = "return";
+        public const string Root = "root";
+        public const string UpstreamServer = "server";
+        public const string Ssl = "ssl";
+
+        public const string AttachName = "attach.test";
+        public const string AttachAlias = "www.attach.test";
+        public const string AttachPort = "8084";
+        public const string RootPath = "/";
+        public const string WebRoot = "/var/www";
+        public const string OtherWebRoot = "/srv/www";
+
+        public const string SslServerName = "api.example.test";
+        public const string PlainServerName = "plain.example.test";
+        public const string AddedServerName = "new.example.test";
+        public const string AddedUpstreamName = "added_backend";
+        public const string AddedServerPort = "8089";
+
+        public const string UpstreamName = "backend";
+
+        public const string ServerText = "server_name text.test;\nlisten 8085;\n\nlocation /api\n{\n    proxy_pass http://127.0.0.1:5000;\n}\n";
+        public const string TextName = "text.test";
+        public const string BackendUrl = "http://127.0.0.1:5000";
+        public const string BackendAddress = "127.0.0.1:5000";
+        public const string UpstreamText = "server 127.0.0.1:5000;";
+        public const string HealthPath = "/health";
+        public const string LocationText = "return 204;";
+        public const string BrokenText = "listen 80;\nserver_name broken.test\n}\n";
+        public static readonly (int Line, int Column) BrokenTextPosition = (3, 1);
+        public const string BrokenTextMessage = "unexpected \"}\"";
+
+        public const string CustomDirective = "more_set_headers";
+        public static readonly string[] CustomArguments = ["Server: hidden", "X-Custom: on"];
+        public const string CustomText = "more_set_headers   \"Server: hidden\"   \"X-Custom: on\" ;";
+
+        public static readonly string[] TextNames = [TextName];
+        public static readonly string[] BackendUrls = [BackendUrl];
+        public static readonly string[] BackendAddresses = [BackendAddress];
+        public static readonly string[] SslServerNames = [SslServerName];
+        public static readonly string[] MainServerNames = [SslServerName, PlainServerName];
+        public static readonly string[] MainUpstreamNames = [UpstreamName, AddedUpstreamName];
+
+        public static string MainIncluding(string site) => $"events {{}}\nhttp {{\n    include {site};\n}}\n";
+    }
+
     public static class Formats
     {
         public const string CompactGuid = "N";
@@ -384,6 +457,8 @@ public static class Consts
             $"{test}: {explanation?.ReplaceLineEndings(" ")}\n";
 
         public static string Violation(string file, int line, string text) => $"{file}:{line}: {text}";
+
+        public static string NginxRejected(object result) => $"nginx -t should accept the generated config: {result}";
 
         public static string TypeWithBase(Type type) => $"{type.FullName} : {type.BaseType?.FullName}";
 

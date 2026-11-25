@@ -10,8 +10,8 @@ namespace Lakasabasz.Nginx.Sdk;
 /// <para>Changes keep the rest of the file as it was; only the changed directive's own text is written anew:</para>
 /// <list type="bullet">
 /// <item><see cref="Add"/> and <see cref="AddBlock"/> append after the last directive, on a new line indented like
-/// the previous directive (in an empty block: one level deeper than the block, with the file's indentation unit, a
-/// tab or four spaces). In a block written on one line (<c>server { listen 80; }</c>) they stay on that line.</item>
+/// the previous directive (in an empty block: one level deeper than the block, by the indentation of the file). In a
+/// block written on one line (<c>server { listen 80; }</c>) they stay on that line.</item>
 /// <item><see cref="Remove(Directive)"/> removes the directive's line: its indentation, the directive, a comment
 /// after it on the same line and the line break. The other directives of that line, if any, stay.</item>
 /// <item><see cref="Set"/> leaves exactly one directive of the name: the first one gets the arguments, the others

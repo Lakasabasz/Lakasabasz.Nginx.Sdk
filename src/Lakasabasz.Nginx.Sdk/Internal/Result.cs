@@ -28,4 +28,13 @@ internal sealed class Result<TValue, TError>
     public static Result<TValue, TError> Success(TValue value) => new(true, value, null);
 
     public static Result<TValue, TError> Failure(TError error) => new(false, default!, error);
+
+    /// <summary>The value turned by <paramref name="map"/>; the same error on a failure.</summary>
+    public Result<TNew, TError> Map<TNew>(Func<TValue, TNew> map) =>
+        IsSuccess ? Result<TNew, TError>.Success(map(Value)) : Result<TNew, TError>.Failure(Error);
+
+    /// <summary>The error turned by <paramref name="map"/>; the same value on a success.</summary>
+    public Result<TValue, TNewError> MapError<TNewError>(Func<TError, TNewError> map)
+        where TNewError : class =>
+        IsSuccess ? Result<TValue, TNewError>.Success(Value) : Result<TValue, TNewError>.Failure(map(Error));
 }

@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+
 namespace Lakasabasz.Nginx.Sdk.Tests.Infrastructure;
 
 public sealed class TestArrange(string configRoot, Func<string> workDirectory)
@@ -88,6 +91,30 @@ public sealed class TestArrange(string configRoot, Func<string> workDirectory)
         var link = ConfigPath(Consts.Files.GhostLink);
         File.CreateSymbolicLink(link, ConfigPath(Consts.Files.GhostTarget));
         return link;
+    }
+
+    public string MainSectionsConfig() => Copy(Consts.Fixtures.Main);
+
+    public string CustomConfig() => Copy(Consts.Fixtures.Custom);
+
+    public void Certificate()
+    {
+        if (Directory.Exists(Consts.Sections.CertificateDirectory))
+            return;
+        var staging = Directory.CreateDirectory(Path.Combine(workDirectory(), Consts.Sections.CertificateStaging)).FullName;
+        using var key = RSA.Create(Consts.Sections.KeySize);
+        var request = new CertificateRequest(Consts.Sections.CertificateSubject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+        File.WriteAllText(Path.Combine(staging, Consts.Sections.CertificateFile), certificate.ExportCertificatePem());
+        File.WriteAllText(Path.Combine(staging, Consts.Sections.CertificateKeyFile), key.ExportRSAPrivateKeyPem());
+        try
+        {
+            Directory.Move(staging, Consts.Sections.CertificateDirectory);
+        }
+        catch (IOException) when (Directory.Exists(Consts.Sections.CertificateDirectory))
+        {
+            Directory.Delete(staging, recursive: true);
+        }
     }
 
     public string PlainEnabledSite() => WriteConfig(Consts.Files.PlainEnabledSite, Consts.Files.PlainEnabledContent);

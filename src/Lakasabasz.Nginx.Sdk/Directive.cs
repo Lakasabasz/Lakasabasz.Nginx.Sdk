@@ -1,4 +1,5 @@
 using Lakasabasz.Nginx.Sdk.Internal.Structure;
+using Lakasabasz.Nginx.Sdk.Views;
 
 namespace Lakasabasz.Nginx.Sdk;
 
@@ -6,8 +7,8 @@ namespace Lakasabasz.Nginx.Sdk;
 /// One directive of a config file, e.g. <c>listen 80;</c>, or a block directive such as <c>server { … }</c>.
 /// </summary>
 /// <remarks>
-/// A directive loaded from a file keeps its original text: it is written back exactly as it was until its
-/// arguments change. A raw block (e.g. <c>content_by_lua_block { … }</c>) keeps its body as opaque text in
+/// The raw access to any directive, also one of a module outside nginx. A directive loaded from a file keeps its original text: it is written back
+/// exactly as it was until its arguments change. A raw block (e.g. <c>content_by_lua_block { … }</c>) keeps its body as opaque text in
 /// <see cref="RawContent"/>; it is never parsed.
 /// </remarks>
 public sealed class Directive
@@ -31,6 +32,12 @@ public sealed class Directive
 
     /// <summary>The body of a raw block (e.g. Lua code) exactly as written; <see langword="null"/> otherwise.</summary>
     public string? RawContent => Node.RawContent;
+
+    /// <summary>
+    /// The directive as written in the file when it was loaded (for a block: up to its closing <c>}</c>);
+    /// <see langword="null"/> for a directive added in code. Does not follow later changes.
+    /// </summary>
+    public string? Text => Node.SourceText;
 
     /// <summary>1-based line where the directive starts in the loaded file; 0 for a directive added in code.</summary>
     /// <remarks>Refers to the text as loaded: it does not follow later changes of the file.</remarks>

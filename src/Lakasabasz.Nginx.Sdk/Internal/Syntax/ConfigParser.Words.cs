@@ -3,61 +3,52 @@ using System.Text;
 namespace Lakasabasz.Nginx.Sdk.Internal.Syntax;
 
 /// <summary>Words of a directive: quoted, plain, with variables and escapes, as nginx reads them.</summary>
-internal sealed partial class ConfigParser
+internal static partial class ConfigParser
 {
-    private const char Escape = '\\';
-
-    private string ReadWord() => _text.Current is '"' or '\'' ? ReadQuotedWord() : ReadPlainWord();
+    private static Result<string, SyntaxProblem> ParseWord(TextCursor cursor) => cursor.Current.IsQuote() ? ParseQuotedWord(cursor) : Success(ParsePlainWord(cursor));
 
     /// <summary>A word in quotes: up to the same quote, then whitespace, <c>;</c>, <c>{</c> or <c>)</c> must follow.</summary>
-    private string ReadQuotedWord()
+    private static Result<string, SyntaxProblem> ParseQuotedWord(TextCursor cursor)
     {
-        var quote = _text.Current;
-        _text.Advance();
-        var start = _text.Position;
-        while (true)
-        {
-            if (_text.AtEnd)
-                throw new SyntaxError(_text.Position, EndOfFileInDirective);
-            if (_text.Current == Escape)
-                _text.Advance(2);
-            else if (_text.Current == quote)
-                break;
-            else
-                _text.Advance();
-        }
+        var quote = cursor.Current;
+        cursor.Advance();
+        var start = cursor.CurrentPosition;
+        while (!cursor.AtEnd && cursor.Current != quote)
+            cursor.Advance(cursor.Current.IsEscape() ? 2 : 1);
+        if (cursor.AtEnd)
+            return Failure<string>(Problem(cursor, EndOfFileInDirective));
 
-        var word = Unescape(start, _text.Position);
-        _text.Advance();
-        if (!_text.AtEnd && !CanFollowQuote(_text.Current))
-            throw Unexpected();
-        return word;
+        var word = Unescape(cursor, start.Index, cursor.Index);
+        cursor.Advance();
+        if (!cursor.AtEnd && !CanFollowQuote(cursor.Current))
+            return Failure<string>(Unexpected(cursor));
+        return Success(word);
     }
 
     /// <summary>A word without quotes: up to whitespace, <c>;</c> or <c>{</c>; an escaped character and the <c>{</c> of <c>${</c> belong to it.</summary>
-    private string ReadPlainWord()
+    private static string ParsePlainWord(TextCursor cursor)
     {
-        var start = _text.Position;
-        while (!_text.AtEnd && !EndsPlainWord(_text.Current))
-            _text.Advance(_text.Current == Escape || StartsVariableName() ? 2 : 1);
-        return Unescape(start, Math.Min(_text.Position, _text.Text.Length));
+        var start = cursor.CurrentPosition;
+        while (!cursor.AtEnd && !EndsPlainWord(cursor.Current))
+            cursor.Advance(cursor.Current.IsEscape() || StartsVariableName(cursor) ? 2 : 1);
+        return Unescape(cursor, start.Index, Math.Min(cursor.Index, cursor.Text.Length));
     }
 
-    private bool StartsVariableName() => _text.Current == '$' && _text.Peek(1) == '{';
+    private static bool StartsVariableName(TextCursor cursor) => cursor.Current == '$' && cursor.Peek(1) == '{';
 
-    private static bool EndsPlainWord(char c) => IsSpace(c) || c is ';' or '{';
+    private static bool EndsPlainWord(char c) => c.IsSpace() || c.IsDirectiveEnd() || c.IsBlockBegin();
 
-    private static bool CanFollowQuote(char c) => IsSpace(c) || c is ';' or '{' or ')';
+    private static bool CanFollowQuote(char c) => c.IsSpace() || c.IsDirectiveEnd() || c.IsBlockBegin() || c == ')';
 
     /// <summary>The value of a word as nginx stores it (ngx_conf_read_token's unescaping).</summary>
-    private string Unescape(int start, int end)
+    private static string Unescape(TextCursor cursor, int start, int end)
     {
         var value = new StringBuilder(end - start);
         var i = start;
         while (i < end)
         {
-            var c = _text.Text[i];
-            if (c == Escape && i + 1 < end && EscapedCharacter(_text.Text[i + 1]) is { } escaped)
+            var c = cursor.Text[i];
+            if (c.IsEscape() && i + 1 < end && EscapedCharacter(cursor.Text[i + 1]) is { } escaped)
             {
                 value.Append(escaped);
                 i += 2;

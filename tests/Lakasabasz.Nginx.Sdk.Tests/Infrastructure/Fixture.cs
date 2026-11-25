@@ -26,4 +26,14 @@ public static class Expected
     public static string InlineAdded => Fixture.Read(Consts.Fixtures.InlineAdded);
 
     public static string CrlfAdded => Fixture.Read(Consts.Fixtures.CrlfAdded);
+
+    public static string AttachAdded => Fixture.Read(Consts.Fixtures.AttachAdded);
+
+    public static string AttachChanged => Fixture.Read(Consts.Fixtures.AttachChanged);
+
+    public static string TextServer => Fixture.Read(Consts.Fixtures.TextServer);
+
+    public static string TextLocationAndUpstream => Fixture.Read(Consts.Fixtures.TextLocationAndUpstream);
+
+    public static string MainAdded => Fixture.Read(Consts.Fixtures.MainAdded);
 }

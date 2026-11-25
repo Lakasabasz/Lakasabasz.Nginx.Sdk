@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Lakasabasz.Nginx.Sdk.Internal;
+using Lakasabasz.Nginx.Sdk.Views;
 
 namespace Lakasabasz.Nginx.Sdk;
 
@@ -31,6 +32,32 @@ public sealed class NginxFile
 
     /// <summary>The top-level directives of the file, read and changed by name: <c>Add</c>, <c>Set</c>, <c>Remove</c>, <c>AddBlock</c>.</summary>
     public DirectiveCollection Directives => Facades.Of(_document.Tree.Structure);
+
+    /// <summary>
+    /// Every <c>server</c> block of the file: at its top level (a site) and in its <c>http</c> block (<c>nginx.conf</c>),
+    /// in the order of the file. A new server goes into <c>http</c> when the file has one, else at the top level.
+    /// </summary>
+    public ServerCollection Servers => new(SectionScope.OfFile(_document.Tree.Structure));
+
+    /// <summary>
+    /// Every <c>upstream</c> block of the file: at its top level (a file of <c>conf.d</c>) and in its <c>http</c> block,
+    /// in the order of the file. A new upstream goes into <c>http</c> when the file has one, else at the top level.
+    /// </summary>
+    public UpstreamCollection Upstreams => new(SectionScope.OfFile(_document.Tree.Structure));
+
+    /// <summary>The <c>http { }</c> block, e.g. of <c>nginx.conf</c>; setting a loose one replaces it, <see langword="null"/> removes it.</summary>
+    public Http? Http
+    {
+        get => Sections.Get(_document.Tree.Structure, Sdk.Http.Keyword, directive => new Http(directive));
+        set => Sections.Set(_document.Tree.Structure, Sdk.Http.Keyword, value);
+    }
+
+    /// <summary>The <c>events { }</c> block of <c>nginx.conf</c>; setting a loose one replaces it, <see langword="null"/> removes it.</summary>
+    public Events? Events
+    {
+        get => Sections.Get(_document.Tree.Structure, Sdk.Events.Keyword, directive => new Events(directive));
+        set => Sections.Set(_document.Tree.Structure, Sdk.Events.Keyword, value);
+    }
 
     /// <summary>
     /// The content of the file with the changes made so far, as it would be written. An unchanged file gives exactly

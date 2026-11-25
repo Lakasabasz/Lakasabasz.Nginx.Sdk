@@ -11,27 +11,49 @@ internal sealed class StructureBlock
     private readonly List<StructureDirective> _removed = [];
     private readonly bool _readOnly;
 
+    /// <summary>A block of these directives; a directive that was in another block is now in this one.</summary>
     public StructureBlock(List<StructureDirective> directives, bool readOnly = false)
     {
         _directives = directives;
         _readOnly = readOnly;
+        foreach (var directive in directives)
+            directive.Parent = this;
     }
 
-    /// <summary>The block of a simple directive: empty and not changeable.</summary>
-    public static StructureBlock NotABlock() => new([], readOnly: true);
+    /// <summary>The block of a simple directive (or of a raw one): empty and not changeable.</summary>
+    public static StructureBlock OfSimpleDirective() => new([], readOnly: true);
 
-    public IReadOnlyList<StructureDirective> Directives => _directives;
+    public IReadOnlyList<StructureDirective> Directives => _directives.AsReadOnly();
+
+    /// <summary>The block directive this is the block of; <see langword="null"/> for a file.</summary>
+    public StructureDirective? Owner { get; set; }
 
     public Result<StructureDirective, UsageError> Add(string name, IReadOnlyList<string> arguments) =>
-        Append(new StructureDirective(name, arguments, DirectiveKind.Simple, null, null));
+        Attach(StructureDirective.NewSimple(name, arguments));
 
     public Result<StructureDirective, UsageError> AddBlock(string name, IReadOnlyList<string> arguments) =>
-        Append(new StructureDirective(name, arguments, DirectiveKind.Block, new StructureBlock([]), null));
+        Attach(StructureDirective.NewBlock(name, arguments, []));
+
+    /// <summary>Adds a directive made elsewhere (a loose section) at the end; it may be in no other block.</summary>
+    public Result<StructureDirective, UsageError> Attach(StructureDirective directive)
+    {
+        if (NotABlockError() is { } error)
+            return Result<StructureDirective, UsageError>.Failure(error);
+        if (directive.Parent is not null)
+            return Result<StructureDirective, UsageError>.Failure(new UsageError(UsageErrorKind.InvalidOperation,
+                $"This {directive.Name} is in a file already: remove it there first, or add a new one."));
+        _directives.Add(directive);
+        _added.Add(directive);
+        directive.Parent = this;
+        return Result<StructureDirective, UsageError>.Success(directive);
+    }
 
     /// <summary>The first directive called <paramref name="name"/> gets the arguments, the others are removed; without any, it is added.</summary>
     public Result<StructureDirective, UsageError> Set(string name, IReadOnlyList<string> arguments)
     {
-        var existing = _directives.Where(directive => directive.Name == name).ToList();
+        if (NotABlockError() is { } error)
+            return Result<StructureDirective, UsageError>.Failure(error);
+        var existing = Directives.Where(directive => directive.Name == name).ToList();
         if (existing.Count == 0)
             return Add(name, arguments);
 
@@ -44,13 +66,16 @@ internal sealed class StructureBlock
     /// <returns>How many directives called <paramref name="name"/> were removed.</returns>
     public Result<int, UsageError> Remove(string name)
     {
-        if (ReadOnlyError() is { } error)
+        if (NotABlockError() is { } error)
             return Result<int, UsageError>.Failure(error);
-        return Result<int, UsageError>.Success(_directives.Where(directive => directive.Name == name).ToList().Count(Detach));
+        var named = Directives.Where(directive => directive.Name == name).ToList();
+        foreach (var directive in named)
+            Detach(directive);
+        return Result<int, UsageError>.Success(named.Count);
     }
 
     /// <returns>Whether the directive was in this block.</returns>
-    public Result<bool, UsageError> Remove(StructureDirective directive) => ReadOnlyError() is { } error
+    public Result<bool, UsageError> Remove(StructureDirective directive) => NotABlockError() is { } error
         ? Result<bool, UsageError>.Failure(error)
         : Result<bool, UsageError>.Success(Detach(directive));
 
@@ -67,14 +92,13 @@ internal sealed class StructureBlock
             if (_added.Contains(directive))
             {
                 changes.Added.Add(directive);
-                directive.AcceptArguments();
-                directive.Block.TakeChanges();
+                AcceptWithEverythingIn(directive);
                 continue;
             }
 
             if (directive.ArgumentsChanged)
-                changes.Changed.Add(directive);
-            directive.AcceptArguments();
+                changes.ArgumentsChanged.Add(directive);
+            directive.AcceptChanges();
             if (directive.Kind == DirectiveKind.Block)
                 changes.Nested.Add((directive, directive.Block.TakeChanges()));
         }
@@ -84,25 +108,24 @@ internal sealed class StructureBlock
         return changes;
     }
 
-    private Result<StructureDirective, UsageError> Append(StructureDirective directive)
+    /// <summary>An added directive and everything in it count as written: their changes are forgotten.</summary>
+    private static void AcceptWithEverythingIn(StructureDirective directive)
     {
-        if (ReadOnlyError() is { } error)
-            return Result<StructureDirective, UsageError>.Failure(error);
-        _directives.Add(directive);
-        _added.Add(directive);
-        return Result<StructureDirective, UsageError>.Success(directive);
+        directive.AcceptChanges();
+        directive.Block.TakeChanges();
     }
 
     private bool Detach(StructureDirective directive)
     {
         if (!_directives.Remove(directive))
             return false;
+        directive.Parent = null;
         if (!_added.Remove(directive))
             _removed.Add(directive);
         return true;
     }
 
-    private UsageError? ReadOnlyError() => _readOnly
+    private UsageError? NotABlockError() => _readOnly
         ? new UsageError(UsageErrorKind.InvalidOperation, "Only a block directive contains directives.")
         : null;
 }
