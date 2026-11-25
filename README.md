@@ -58,7 +58,7 @@ profiles), generic directives for anything outside the official nginx directive 
 | Sections (`Http`, `Events`, `Server`, `Location`, `Upstream`, `Types`, `LimitExcept`): made in code or read from a file, `Add`/`Remove`/LINQ on their collections | works |
 | Properties for core HTTP, proxy, SSL and header directives (`null` removes); `Server.Names`, `Listens`, `Ports`, `SslPorts`, `IsDefault` | works |
 | Plain nginx text: `AddFromText` on every section collection | works |
-| Layout of new text (file: line break, indentation; block: one line, brace on a new line) and comments (own line, end of a line); raw access to any directive (`Directive.Text`) | works |
+| Style of new text (`NginxStyle` of a file or block: line break, indentation, braces, empty lines before a block) and comments by fixed rules (end of a directive's line, right above a block, top of the file); raw access to any directive (`Directive.Text`) | works |
 | Fluent API, lambdas, reusable objects; typed properties for the rest of the official directive index | planned |
 | Committing changes (`GetChanges`, `Test`, `Apply`, `CommitChanges`); `nginx.Server`: `Version`, `Test()`, `Reload()` | planned |
 
@@ -75,7 +75,7 @@ server.Directives.Set("more_set_headers", "Server: hidden"); // any directive, a
 
 The same server can be changed with properties, generic directives and nginx text in any order: they all change
 the same objects. The examples in `examples/` (`Examples.Properties`, `Examples.GenericDirectives`,
-`Examples.NginxText`, `Examples.LayoutAndComments`) do the same task in each style.
+`Examples.NginxText`, `Examples.StyleAndComments`) do the same task in each style.
 
 `NginxEnvironment` defaults to a standard Debian/Ubuntu installation (`/usr/sbin/nginx`, `/etc/nginx`); give only what differs, e.g. `new NginxEnvironment(binary: "/opt/nginx/sbin/nginx")`.
 

@@ -45,9 +45,6 @@ public static class Expected
 
     public static string MixedOneLineAdded => Fixture.Read(Consts.Fixtures.MixedOneLineAdded);
 
-    public static string MixedCommented => Fixture.Read(Consts.Fixtures.MixedCommented);
-
-    public static string MixedCommentLines => Fixture.Read(Consts.Fixtures.MixedCommentLines);
 
     public static string AttachAdded => Fixture.Read(Consts.Fixtures.AttachAdded);
 
@@ -64,4 +61,14 @@ public static class Expected
     public static string PropertiesRenamed => Fixture.Read(Consts.Fixtures.PropertiesRenamed);
 
     public static string MainAdded => Fixture.Read(Consts.Fixtures.MainAdded);
+
+    public static string MixedLooseAdded => Fixture.Read(Consts.Fixtures.MixedLooseAdded);
+
+    public static string Spaced => Fixture.Read(Consts.Fixtures.Spaced);
+
+    public static string CommentsChanged => Fixture.Read(Consts.Fixtures.CommentsChanged);
+
+    public static string CommentsMoved => Fixture.Read(Consts.Fixtures.CommentsMoved);
+
+    public static string CommentsUnfolded => Fixture.Read(Consts.Fixtures.CommentsUnfolded);
 }

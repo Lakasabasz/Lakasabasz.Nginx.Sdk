@@ -97,6 +97,8 @@ public sealed class TestArrange(string configRoot, Func<string> workDirectory)
 
     public string MixedConfig() => Copy(Consts.Fixtures.Mixed);
 
+    public string CommentsConfig() => Copy(Consts.Fixtures.Comments);
+
     public string MainSectionsConfig() => Copy(Consts.Fixtures.Main);
 
     public string CustomConfig() => Copy(Consts.Fixtures.Custom);
