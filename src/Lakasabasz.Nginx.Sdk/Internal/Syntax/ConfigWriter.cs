@@ -6,7 +6,20 @@ namespace Lakasabasz.Nginx.Sdk.Internal.Syntax;
 /// <summary>Line break and indentation unit of a file, used for the text of new directives.</summary>
 internal sealed record Formatting(string Newline, string IndentUnit)
 {
-    public static Formatting Default { get; } = new("\n", "    ");
+    private const string Lf = "\n";
+    private const string Crlf = "\r\n";
+
+    public static Formatting Default { get; } = new(Lf, "    ");
+
+    /// <summary>A formatting set in code: the line break is <c>\n</c> or <c>\r\n</c>, the indentation spaces or tabs.</summary>
+    public static Result<Formatting, UsageError> Create(string newline, string indentUnit)
+    {
+        if (newline is not (Lf or Crlf))
+            return Result<Formatting, UsageError>.Failure(new UsageError(UsageErrorKind.Argument, "The line break is \\n or \\r\\n.", "value"));
+        if (indentUnit.Length == 0 || indentUnit.Any(c => c is not (' ' or '\t')))
+            return Result<Formatting, UsageError>.Failure(new UsageError(UsageErrorKind.Argument, "The indentation is spaces or tabs.", "value"));
+        return Result<Formatting, UsageError>.Success(new Formatting(newline, indentUnit));
+    }
 
     /// <summary>The dominant line break and the indentation unit (tab or four spaces) of <paramref name="text"/>.</summary>
     public static Formatting Of(string text)

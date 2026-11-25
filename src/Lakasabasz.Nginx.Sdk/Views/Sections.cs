@@ -23,16 +23,6 @@ internal static class Sections
             block.Attach(section.Node).OrThrow();
     }
 
-    /// <summary>
-    /// The directives of a file where its HTTP sections are: those at its top level (a site, a file of <c>conf.d</c>)
-    /// and those inside its <c>http</c> block (<c>nginx.conf</c>), in the order of the file.
-    /// </summary>
-    public static IEnumerable<StructureDirective> OfFileAndHttp(StructureBlock root) => root.Directives
-        .SelectMany(directive => IsSection(directive, Http.Keyword) ? directive.Block.Directives : [directive]);
-
-    /// <summary>Where a new HTTP section of a file goes: into its <c>http</c> block, at the top level without one.</summary>
-    public static StructureBlock HttpTarget(StructureBlock root) => FirstOf(root, Http.Keyword)?.Block ?? root;
-
     private static StructureDirective? FirstOf(StructureBlock block, string name) =>
         block.Directives.FirstOrDefault(directive => IsSection(directive, name));
 

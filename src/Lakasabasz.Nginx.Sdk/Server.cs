@@ -52,7 +52,7 @@ public sealed class Server : HttpSection
     public bool IsDefault => Listens.Any(listen => listen.DefaultServer);
 
     /// <summary>The <c>location</c> blocks of the server (not nested ones).</summary>
-    public LocationCollection Locations => new(Block);
+    public LocationCollection Locations => new(SectionScope.Of(Block));
 
     /// <summary>The certificate and TLS settings (<c>ssl_*</c>).</summary>
     public SslSettings Ssl => new(Block);

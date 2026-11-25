@@ -38,17 +38,13 @@ public sealed class NginxFile
     /// Every <c>server</c> block of the file: at its top level (a site) and in its <c>http</c> block (<c>nginx.conf</c>),
     /// in the order of the file. A new server goes into <c>http</c> when the file has one, else at the top level.
     /// </summary>
-    public ServerCollection Servers => new(
-        () => Sections.OfFileAndHttp(_document.Tree.Structure),
-        () => Sections.HttpTarget(_document.Tree.Structure));
+    public ServerCollection Servers => new(SectionScope.OfFile(_document.Tree.Structure));
 
     /// <summary>
     /// Every <c>upstream</c> block of the file: at its top level (a file of <c>conf.d</c>) and in its <c>http</c> block,
     /// in the order of the file. A new upstream goes into <c>http</c> when the file has one, else at the top level.
     /// </summary>
-    public UpstreamCollection Upstreams => new(
-        () => Sections.OfFileAndHttp(_document.Tree.Structure),
-        () => Sections.HttpTarget(_document.Tree.Structure));
+    public UpstreamCollection Upstreams => new(SectionScope.OfFile(_document.Tree.Structure));
 
     /// <summary>The <c>http { }</c> block, e.g. of <c>nginx.conf</c>; setting a loose one replaces it, <see langword="null"/> removes it.</summary>
     public Http? Http
@@ -72,14 +68,7 @@ public sealed class NginxFile
     public NginxLayout Layout
     {
         get => new() { Newline = _document.Tree.Formatting.Newline, Indentation = _document.Tree.Formatting.IndentUnit };
-        set
-        {
-            if (value.Newline is not ("\n" or "\r\n"))
-                throw new ArgumentException("The line break is \\n or \\r\\n.", nameof(value));
-            if (value.Indentation.Length == 0 || value.Indentation.Any(c => c is not (' ' or '\t')))
-                throw new ArgumentException("The indentation is spaces or tabs.", nameof(value));
-            _document.Tree.Formatting = new Formatting(value.Newline, value.Indentation);
-        }
+        set => _document.Tree.Formatting = Formatting.Create(value.Newline, value.Indentation).OrThrow();
     }
 
     /// <summary>

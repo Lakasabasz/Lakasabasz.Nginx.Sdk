@@ -30,10 +30,10 @@ internal sealed class StructureBlock
     public IReadOnlyList<StructureNode> Nodes => _nodes;
 
     public Result<StructureDirective, UsageError> Add(string name, IReadOnlyList<string> arguments) =>
-        Attach(new StructureDirective(name, arguments, DirectiveKind.Simple, null, null));
+        Attach(StructureDirective.NewSimple(name, arguments));
 
     public Result<StructureDirective, UsageError> AddBlock(string name, IReadOnlyList<string> arguments) =>
-        Attach(new StructureDirective(name, arguments, DirectiveKind.Block, new StructureBlock([]), null));
+        Attach(StructureDirective.NewBlock(name, arguments, []));
 
     /// <summary>Adds a directive made elsewhere (a loose section) at the end; it may be in no other block.</summary>
     public Result<StructureDirective, UsageError> Attach(StructureDirective directive)

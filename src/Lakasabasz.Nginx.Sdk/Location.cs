@@ -52,7 +52,7 @@ public sealed class Location : HttpSection
     }
 
     /// <summary>The locations nested in this one.</summary>
-    public LocationCollection Locations => new(Block);
+    public LocationCollection Locations => new(SectionScope.Of(Block));
 
     /// <summary>The proxied server requests are passed to, e.g. <c>http://127.0.0.1:5000</c> (<c>proxy_pass</c>).</summary>
     public string? ProxyPass

@@ -22,10 +22,10 @@ public sealed class Http : HttpSection
     }
 
     /// <summary>The <c>server</c> blocks written in this block (not those of included files).</summary>
-    public ServerCollection Servers => new(Block);
+    public ServerCollection Servers => new(SectionScope.Of(Block));
 
     /// <summary>The <c>upstream</c> blocks written in this block (not those of included files).</summary>
-    public UpstreamCollection Upstreams => new(Block);
+    public UpstreamCollection Upstreams => new(SectionScope.Of(Block));
 
     /// <summary>The certificate and TLS settings shared by the servers (<c>ssl_*</c>).</summary>
     public SslSettings Ssl => new(Block);

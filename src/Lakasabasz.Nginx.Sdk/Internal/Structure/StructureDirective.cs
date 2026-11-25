@@ -18,6 +18,14 @@ internal sealed class StructureDirective : StructureNode
         Column = column;
     }
 
+    /// <summary>A new simple directive, e.g. <c>listen 80;</c>, made in code.</summary>
+    public static StructureDirective NewSimple(string name, IReadOnlyList<string> arguments) =>
+        new(name, arguments, DirectiveKind.Simple, block: null, rawContent: null);
+
+    /// <summary>A new block directive made in code, holding <paramref name="body"/> (directives and comments).</summary>
+    public static StructureDirective NewBlock(string name, IReadOnlyList<string> arguments, List<StructureNode> body) =>
+        new(name, arguments, DirectiveKind.Block, new StructureBlock(body), rawContent: null);
+
     public string Name { get; }
 
     public IReadOnlyList<string> Arguments { get; private set; }

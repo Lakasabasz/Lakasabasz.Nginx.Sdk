@@ -21,7 +21,7 @@ public abstract class Section
     }
 
     private protected Section(string name, params string[] arguments)
-        : this(new StructureDirective(name, arguments, DirectiveKind.Block, new StructureBlock([]), null))
+        : this(StructureDirective.NewBlock(name, arguments, []))
     {
         Facades.Register(this);
     }

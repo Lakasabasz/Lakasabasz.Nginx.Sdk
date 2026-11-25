@@ -51,14 +51,17 @@ public sealed class Directive
     public string? Text => Node.SourceText;
 
     /// <summary>How the block is written: on one line, or with <c>{</c> on a line of its own (see <see cref="BlockLayout"/>).</summary>
-    /// <exception cref="InvalidOperationException">Set on a simple directive or a raw block.</exception>
+    /// <exception cref="InvalidOperationException">Read or set on a simple directive or a raw block.</exception>
     public BlockLayout Layout
     {
-        get => new() { OneLine = Node.Style.OneLine, BraceOnNewLine = Node.Style.BraceOnNewLine };
+        get
+        {
+            var style = BlockStyleOrThrow();
+            return new BlockLayout { OneLine = style.OneLine, BraceOnNewLine = style.BraceOnNewLine };
+        }
         set
         {
-            if (Node.Kind != DirectiveKind.Block)
-                throw new InvalidOperationException($"{Node.Name} is not a block: only a block has a layout.");
+            BlockStyleOrThrow();
             Node.SetStyle(new BlockStyle(value.OneLine, value.BraceOnNewLine));
         }
     }
@@ -71,4 +74,8 @@ public sealed class Directive
     public int Column => Node.Column;
 
     internal StructureDirective Node { get; }
+
+    private BlockStyle BlockStyleOrThrow() => Node.Kind == DirectiveKind.Block
+        ? Node.Style
+        : throw new InvalidOperationException($"{Node.Name} is not a block: only a block has a layout.");
 }
