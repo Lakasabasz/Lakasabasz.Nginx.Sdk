@@ -14,6 +14,7 @@ namespace Lakasabasz.Nginx.Sdk;
 /// tab or four spaces). In a block written on one line (<c>server { listen 80; }</c>) they stay on that line.</item>
 /// <item><see cref="Remove(Directive)"/> removes the directive's line: its indentation, the directive, a comment
 /// after it on the same line and the line break. The other directives of that line, if any, stay.</item>
+/// <item><see cref="AddComment"/> appends a comment on a line of its own, like a directive.</item>
 /// <item><see cref="Set"/> leaves exactly one directive of the name: the first one gets the arguments, the others
 /// are removed; without any, the directive is added.</item>
 /// <item>Changed arguments are written separated by single spaces and quoted (<c>"…"</c>) only when nginx needs it:
@@ -49,6 +50,11 @@ public sealed class DirectiveCollection : IReadOnlyList<Directive>
     /// </summary>
     /// <returns>The directive with the arguments.</returns>
     public Directive Set(string name, params string[] arguments) => Facades.Of(_block.Set(name, arguments).OrThrow());
+
+    /// <summary>Adds a comment on a line of its own after the last directive, e.g. <c>AddComment("API")</c> writes <c># API</c>.</summary>
+    /// <param name="text">The comment without <c>#</c>; one line.</param>
+    /// <exception cref="ArgumentException">The text contains a line break.</exception>
+    public void AddComment(string text) => _block.AddComment(text).OrThrow();
 
     /// <summary>Removes every directive called <paramref name="name"/> from this collection (not from nested blocks).</summary>
     /// <returns>How many were removed.</returns>

@@ -61,10 +61,13 @@ internal sealed class StructureDirective : StructureNode
         ArgumentsChanged = true;
     }
 
-    public void SetComment(string? comment)
+    public Result<StructureDirective, UsageError> SetComment(string? comment)
     {
+        if (StructureComment.Check(comment) is { } error)
+            return Result<StructureDirective, UsageError>.Failure(error);
         Comment = comment;
         CommentChanged = true;
+        return Result<StructureDirective, UsageError>.Success(this);
     }
 
     public void SetStyle(BlockStyle style)
@@ -74,7 +77,7 @@ internal sealed class StructureDirective : StructureNode
     }
 
     /// <summary>The comment and style as read from a file: not a change.</summary>
-    public void Read(string? comment, BlockStyle style, string sourceText)
+    public void Read(string? comment, BlockStyle style, string? sourceText)
     {
         Comment = comment;
         Style = style;

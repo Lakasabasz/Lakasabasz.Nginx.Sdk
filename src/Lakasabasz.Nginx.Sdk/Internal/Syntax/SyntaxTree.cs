@@ -12,6 +12,9 @@ internal sealed class SyntaxTree
 {
     private const string Include = "include";
 
+    /// <summary>Where a syntax error in a piece of nginx text is reported: the text is in no file.</summary>
+    private static readonly NginxPath FragmentPath = new("(nginx text)");
+
     private readonly SyntaxBinding _binding;
 
     public SyntaxTree(SyntaxBlock root, Formatting formatting)
@@ -28,6 +31,18 @@ internal sealed class SyntaxTree
 
     /// <summary>The internal structure of the file: its directives, without formatting.</summary>
     public StructureBlock Structure => _binding.Structure;
+
+    /// <summary>
+    /// The directives and comments of a piece of nginx text, e.g. the body of a section pasted in code; a syntax error
+    /// is at a line and column of the text.
+    /// </summary>
+    public static Result<List<StructureNode>, NginxParseError> Fragment(string text)
+    {
+        var parsed = ConfigParser.Parse(FragmentPath, text);
+        return parsed.IsSuccess
+            ? Result<List<StructureNode>, NginxParseError>.Success(SyntaxBinding.Fragment(parsed.Value.Root))
+            : Result<List<StructureNode>, NginxParseError>.Failure(parsed.Error);
+    }
 
     /// <summary>The file's text: the changes of the structure applied, everything unchanged as it was read.</summary>
     public string Render(int capacity)

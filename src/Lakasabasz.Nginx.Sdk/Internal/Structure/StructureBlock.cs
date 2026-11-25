@@ -12,11 +12,12 @@ internal sealed class StructureBlock
     private readonly List<StructureDirective> _removed = [];
     private readonly bool _readOnly;
 
-    public StructureBlock(List<StructureDirective> directives, bool readOnly = false)
+    /// <summary>A block of these directives and comments; a directive that was in another block is now in this one.</summary>
+    public StructureBlock(List<StructureNode> nodes, bool readOnly = false)
     {
-        _nodes = [.. directives];
+        _nodes = nodes;
         _readOnly = readOnly;
-        foreach (var directive in directives)
+        foreach (var directive in nodes.OfType<StructureDirective>())
             directive.Parent = this;
     }
 
@@ -51,7 +52,7 @@ internal sealed class StructureBlock
     /// <summary>Adds a comment on a line of its own after the last directive.</summary>
     public Result<StructureComment, UsageError> AddComment(string text)
     {
-        if (ReadOnlyError() is { } error)
+        if ((ReadOnlyError() ?? StructureComment.Check(text)) is { } error)
             return Result<StructureComment, UsageError>.Failure(error);
         var comment = new StructureComment(text);
         _nodes.Add(comment);

@@ -28,31 +28,47 @@ internal sealed class SyntaxBinding
         return binding;
     }
 
-    /// <summary>The structure of a piece of nginx text, e.g. pasted into a section: its directives, not linked to any tree.</summary>
-    public static IReadOnlyList<StructureDirective> DirectivesOf(SyntaxBlock root) => Bind(root).Structure.Directives;
+    /// <summary>
+    /// The directives and comments of a piece of nginx text, e.g. pasted into a section: added in code, so with no
+    /// place in a file and no tree of their own; a block takes them by being made of them.
+    /// </summary>
+    public static List<StructureNode> Fragment(SyntaxBlock root) => new SyntaxBinding().NodesOf(root, fromFile: false);
 
     /// <summary>Applies the changes of the structure since the last call to the tree.</summary>
     public void Apply(SyntaxBlock root, Formatting formatting) => Apply(root, Structure.TakeChanges(), formatting, ownerIndentation: null);
 
-    private StructureBlock StructureOf(SyntaxBlock block)
+    private StructureBlock StructureOf(SyntaxBlock block) => new(NodesOf(block, fromFile: true));
+
+    /// <summary>
+    /// Every directive with the comment after it on its line, and the comments on lines of their own. From a file, a
+    /// directive keeps its place and text, and its node is remembered for later edits.
+    /// </summary>
+    private List<StructureNode> NodesOf(SyntaxBlock block, bool fromFile)
     {
-        var directives = new List<StructureDirective>();
+        var nodes = new List<StructureNode>();
         foreach (var line in block.Lines)
         {
             for (var i = 0; i < line.Items.Count; i++)
             {
-                if (line.Items[i].Node is not SyntaxDirective node)
+                var item = line.Items[i].Node;
+                if (item is SyntaxComment standalone && (i == 0 || line.Items[i - 1].Node is not SyntaxDirective))
+                    nodes.Add(new StructureComment(TextOf(standalone)));
+                if (item is not SyntaxDirective node)
                     continue;
+
                 var kind = node.Block is not null ? DirectiveKind.Block : node.Raw is not null ? DirectiveKind.Raw : DirectiveKind.Simple;
-                var directive = new StructureDirective(node.Name, node.Arguments, kind,
-                    node.Block is { } nested ? StructureOf(nested) : null, node.Raw, node.Line, node.Column);
+                var nested = node.Block is { } inner ? new StructureBlock(NodesOf(inner, fromFile)) : null;
+                var directive = fromFile
+                    ? new StructureDirective(node.Name, node.Arguments, kind, nested, node.Raw, node.Line, node.Column)
+                    : new StructureDirective(node.Name, node.Arguments, kind, nested, node.Raw);
                 var comment = i + 1 < line.Items.Count && line.Items[i + 1].Node is SyntaxComment after ? TextOf(after) : null;
-                directive.Read(comment, StyleOf(node), TextOf(node));
-                _nodes[directive] = node;
-                directives.Add(directive);
+                directive.Read(comment, StyleOf(node), fromFile ? TextOf(node) : null);
+                if (fromFile)
+                    _nodes[directive] = node;
+                nodes.Add(directive);
             }
         }
-        return new StructureBlock(directives);
+        return nodes;
     }
 
     private void Apply(SyntaxBlock block, BlockChanges changes, Formatting formatting, string? ownerIndentation)
@@ -85,30 +101,41 @@ internal sealed class SyntaxBinding
             Apply(node.Block!, nested, formatting, block.IndentationOf(node));
         }
 
-        var holdsBlock = block.HoldsBlock;
-        foreach (var added in changes.Added)
+        AddAll(block, changes.Added, formatting, ownerIndentation, block.HoldsBlock);
+    }
+
+    /// <summary>New directives and comments in order, each after the one before.</summary>
+    private void AddAll(SyntaxBlock block, IEnumerable<StructureNode> nodes, Formatting formatting, string? ownerIndentation, bool holdsBlock)
+    {
+        SyntaxNode? previous = null;
+        foreach (var added in nodes)
         {
-            Add(block, added, formatting, ownerIndentation, holdsBlock);
+            previous = Add(block, added, formatting, ownerIndentation, holdsBlock, previous);
             holdsBlock |= added is StructureDirective { IsBlock: true };
         }
     }
 
-    /// <summary>A new directive or comment after the last directive of the block; a comment always ends its line.</summary>
-    private void Add(SyntaxBlock block, StructureNode added, Formatting formatting, string? ownerIndentation, bool holdsBlock)
+    /// <summary>
+    /// A new directive or comment after <paramref name="previous"/>, or after the last directive of the block; a comment
+    /// always ends its line.
+    /// </summary>
+    /// <returns>Its node.</returns>
+    private SyntaxNode Add(SyntaxBlock block, StructureNode added, Formatting formatting, string? ownerIndentation, bool holdsBlock, SyntaxNode? previous)
     {
         if (added is StructureComment comment)
         {
             var node = new SyntaxComment(LineOf(comment.Text)!);
-            block.Append((_, _) => node, formatting, ownerIndentation, holdsBlock: true);
+            block.Append((_, _) => node, formatting, ownerIndentation, holdsBlock: true, previous);
             block.EndLine(node, formatting, ownerIndentation);
-            return;
+            return node;
         }
 
         var directive = (StructureDirective)added;
         SyntaxDirective? created = null;
-        block.Append((indentation, oneLine) => created = Create(directive, formatting, indentation, oneLine), formatting, ownerIndentation, holdsBlock);
+        block.Append((indentation, oneLine) => created = Create(directive, formatting, indentation, oneLine), formatting, ownerIndentation, holdsBlock, previous);
         if (directive.Comment is not null)
             block.SetTrailingComment(created!, LineOf(directive.Comment), formatting, ownerIndentation);
+        return created!;
     }
 
     /// <summary>The node of a new directive; a block gets its directives, on one line or on lines of their own.</summary>
@@ -127,14 +154,7 @@ internal sealed class SyntaxBinding
         var node = new SyntaxDirective(directive.Name, directive.Arguments, header, block, null);
         _nodes[directive] = node;
         if (block is not null)
-        {
-            var holdsBlock = false;
-            foreach (var child in directive.Block.Nodes)
-            {
-                Add(block, child, formatting, blockOnOneLine ? string.Empty : indentation, holdsBlock);
-                holdsBlock |= child is StructureDirective { IsBlock: true };
-            }
-        }
+            AddAll(block, directive.Block.Nodes, formatting, blockOnOneLine ? string.Empty : indentation, holdsBlock: false);
         return node;
     }
 

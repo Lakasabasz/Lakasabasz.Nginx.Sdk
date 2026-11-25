@@ -46,7 +46,8 @@ internal sealed partial class SyntaxBlock
     }
 
     /// <summary>
-    /// Adds a directive after the last one: on the same line in a block written on one line, otherwise on a new line
+    /// Adds a directive after the last one: on the same line in a block written on one line (a block or a comment puts
+    /// such a block onto lines first), otherwise on a new line
     /// indented like the last directive (in a block without directives: after its last comment, one level deeper than
     /// the block; in a file without directives: at its end).
     /// </summary>
@@ -54,14 +55,21 @@ internal sealed partial class SyntaxBlock
     /// <param name="formatting">The line break and indentation unit of the file.</param>
     /// <param name="ownerIndentation">The indentation of the block directive's line; <see langword="null"/> for the top level of a file.</param>
     /// <param name="holdsBlock">Whether a block is in this block already, so nothing goes on one line.</param>
-    public void Append(Func<string, bool, SyntaxNode> create, Formatting formatting, string? ownerIndentation, bool holdsBlock)
+    /// <param name="after">The node added just before in the same change: the new one goes after it, not after the last directive.</param>
+    public void Append(Func<string, bool, SyntaxNode> create, Formatting formatting, string? ownerIndentation, bool holdsBlock, SyntaxNode? after)
     {
         if (ownerIndentation is not null && IsOneLine && !holdsBlock)
+        {
             AppendOnLine(create(string.Empty, true));
-        else if (ownerIndentation is null && !Lines.Any(line => line.HasDirectives))
+            return;
+        }
+
+        if (ownerIndentation is not null && IsOneLine)
+            Restyle(oneLine: false, formatting, ownerIndentation);
+        if (ownerIndentation is null && !Lines.Any(line => line.HasDirectives))
             AppendToFile(create(string.Empty, false), formatting);
         else
-            AppendLine(create, formatting, ownerIndentation ?? string.Empty);
+            AppendLine(create, formatting, ownerIndentation ?? string.Empty, after);
     }
 
     public string IndentationOf(SyntaxNode node) => LineOf(node).Indentation;
@@ -170,9 +178,9 @@ internal sealed partial class SyntaxBlock
         Lines.Add(line);
     }
 
-    private void AppendLine(Func<string, bool, SyntaxNode> create, Formatting formatting, string ownerIndentation)
+    private void AppendLine(Func<string, bool, SyntaxNode> create, Formatting formatting, string ownerIndentation, SyntaxNode? after)
     {
-        var lastDirective = Lines.FindLastIndex(line => line.HasDirectives);
+        var lastDirective = after is not null ? Lines.IndexOf(LineOf(after)) : Lines.FindLastIndex(line => line.HasDirectives);
         var last = lastDirective >= 0 ? lastDirective : Lines.FindLastIndex(line => line.Items.Count > 0);
         var indentation = lastDirective >= 0 ? Lines[last].Indentation : ownerIndentation + formatting.IndentUnit;
         var line = new SyntaxLine { Indentation = indentation, Ending = formatting.Newline };
