@@ -139,13 +139,22 @@ public static class Consts
         public const string CrlfAdded = "Directives/crlf.added.conf";
         public const string Values = "Directives/values.conf";
 
+        public const string Properties = "Sections/properties.conf";
+        public const string PropertiesRemoved = "Sections/properties.removed.conf";
+        public const string PropertiesRenamed = "Sections/properties.renamed.conf";
         public const string Main = "Sections/main.conf";
         public const string MainAdded = "Sections/main.added.conf";
+        public const string Names = "Sections/names.conf";
+        public const string NamesChanged = "Sections/names.changed.conf";
+        public const string ListenReplaced = "Sections/names.listen-replaced.conf";
         public const string Custom = "Sections/custom.conf";
+        public const string CustomKept = "Sections/custom.kept.conf";
         public const string AttachAdded = "Sections/attach.added.conf";
         public const string AttachChanged = "Sections/attach.changed.conf";
         public const string TextServer = "Sections/text.server.conf";
         public const string TextLocationAndUpstream = "Sections/text.location-upstream.conf";
+        public const string Switched = "Sections/switched.conf";
+        public const string IndexExtended = "Sections/index.extended.conf";
 
         public const string ValuesTarget = "conf.d/values.conf";
 
@@ -300,28 +309,95 @@ public static class Consts
         public const string CertificateSubject = "CN=example.test";
         public const int KeySize = 2048;
 
+        public const string ServerBlock = "server";
+        public const string LocationBlock = "location";
         public const string Listen = "listen";
         public const string ServerName = "server_name";
+        public const string Index = "index";
         public const string ProxyPass = "proxy_pass";
         public const string Return = "return";
-        public const string Root = "root";
-        public const string UpstreamServer = "server";
-        public const string Ssl = "ssl";
+        public const string ClientMaxBodySize = "client_max_body_size";
+        public const string SizeVariable = "$body_limit";
 
         public const string AttachName = "attach.test";
         public const string AttachAlias = "www.attach.test";
-        public const string AttachPort = "8084";
+        public const int AttachPort = 8084;
         public const string RootPath = "/";
         public const string WebRoot = "/var/www";
         public const string OtherWebRoot = "/srv/www";
+
+        public const int WorkerConnections = 512;
+        public const string EventMethod = "epoll";
+        public static readonly TimeSpan KeepAliveTimeout = TimeSpan.FromSeconds(65);
+        public static readonly Size BodySize = Size.FromMegabytes(50);
+        public const string DefaultType = "application/octet-stream";
+        public const string HtmlRoot = "/var/www/html";
+        public const string IndexHtml = "index.html";
+        public const string IndexHtm = "index.htm";
 
         public const string SslServerName = "api.example.test";
         public const string PlainServerName = "plain.example.test";
         public const string AddedServerName = "new.example.test";
         public const string AddedUpstreamName = "added_backend";
-        public const string AddedServerPort = "8089";
+        public const int AddedServerPort = 8089;
 
+        public const string RenamedPath = "/v2";
+        public const string RenamedUpstream = "api_backend";
+        public const string RenamedUpstreamUrl = "http://api_backend";
+        public static readonly string[] RenamedMethods = ["GET", "POST"];
+        public const string GluedExact = "=/exact";
+        public const string ExactPath = "/exact";
+        public const string GluedRegex = "~\\.php$";
+        public const string RegexPath = "\\.php$";
+        public const string ProxyHeadersSnippet = "/etc/nginx/snippets/proxy-headers.conf";
+        public const string FrameOptions = "X-Frame-Options";
+        public const string Deny = "deny";
+        public const string All = "all";
+        public const string HostHeader = "Host";
+        public const string HostHeaderLowerCase = "host";
+        public const string HostVariable = "$host";
+        public static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
+        public static readonly TimeSpan ReadTimeout = TimeSpan.FromMinutes(2);
+        public static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(30);
+        public const string HttpVersion = "1.1";
+        public const string HtmlType = "text/html";
+        public static readonly IReadOnlyList<string> HtmlExtensions = ["html", "htm"];
         public const string UpstreamName = "backend";
+        public static readonly UpstreamServer PrimaryBackend = new("127.0.0.1:5000") { Weight = 2, MaxFails = 3, FailTimeout = TimeSpan.FromSeconds(30) };
+        public static readonly UpstreamServer BackupBackend = new("127.0.0.1:5001") { Backup = true };
+        public const int UpstreamKeepAlive = 16;
+        public static readonly TimeSpan UpstreamKeepAliveTimeout = TimeSpan.FromMinutes(1);
+        public const string ExampleName = "example.test";
+        public const string WwwName = "www.example.test";
+        public static readonly Listen SslListen = new() { Port = 443, Ssl = true, DefaultServer = true };
+        public static readonly Listen Ipv6SslListen = new() { Address = "[::]", Port = 443, Ssl = true };
+        public static readonly string[] TryFiles = ["$uri", "$uri/", "=404"];
+        public const string Ciphers = "HIGH:!aNULL:!MD5";
+        public const string SessionCache = "shared:SSL:10m";
+        public static readonly TimeSpan SessionTimeout = TimeSpan.FromDays(1);
+        public const string ApiPath = "/api";
+        public const string UpstreamUrl = "http://backend";
+        public const string Get = "GET";
+        public const string StaticPath = "/static/";
+        public const string StaticRoot = "/var/www/static/";
+
+        public static readonly string[] FileNames = ["first.test", "*.example.test", "second.test"];
+        public const string WildcardName = "*.example.test";
+        public const string MatchedByWildcard = "a.example.test";
+        public const string AddedName = "added.test";
+        public const string FirstLineName = "first.test";
+        public const string RenamedName = "renamed.test";
+        public static readonly Listen[] FileListens =
+        [
+            new() { Port = 80 },
+            new() { Address = "127.0.0.1", Port = 8443, Ssl = true, Http2 = true },
+            new() { Address = "[::]", Port = 8443, Ssl = true },
+            new() { Address = "localhost" },
+            new() { Address = "unix:/run/site.sock" },
+        ];
+        public static readonly int[] FilePorts = [80, 8443];
+        public static readonly int[] FileSslPorts = [8443];
+        public const int ReplacedPort = 8080;
 
         public const string ServerText = "server_name text.test;\nlisten 8085;\n\nlocation /api\n{\n    proxy_pass http://127.0.0.1:5000;\n}\n";
         public const string TextName = "text.test";
@@ -334,18 +410,75 @@ public static class Consts
         public static readonly (int Line, int Column) BrokenTextPosition = (3, 1);
         public const string BrokenTextMessage = "unexpected \"}\"";
 
+        public const int SwitchPort = 8086;
+        public const string SwitchListen = "8086";
+        public const string SwitchName = "switch.test";
+        public const string SwitchText = "listen 8086;\nserver_name switch.test;\nindex index.html;\n";
+        public const string ApiText = "proxy_pass http://127.0.0.1:5000;";
+
         public const string CustomDirective = "more_set_headers";
         public static readonly string[] CustomArguments = ["Server: hidden", "X-Custom: on"];
         public const string CustomText = "more_set_headers   \"Server: hidden\"   \"X-Custom: on\" ;";
 
+        public static readonly string[] Indexes = [IndexHtml, IndexHtm];
+        public static readonly string[] Includes = [ProxyHeadersSnippet];
+        public static readonly string[] Names = [ExampleName, WwwName];
+        public static readonly Listen[] Listens = [SslListen, Ipv6SslListen];
+        public static readonly string[] LimitedMethods = [Get];
+        public static readonly UpstreamServer[] Backends = [PrimaryBackend, BackupBackend];
         public static readonly string[] TextNames = [TextName];
-        public static readonly string[] BackendUrls = [BackendUrl];
-        public static readonly string[] BackendAddresses = [BackendAddress];
         public static readonly string[] SslServerNames = [SslServerName];
         public static readonly string[] MainServerNames = [SslServerName, PlainServerName];
         public static readonly string[] MainUpstreamNames = [UpstreamName, AddedUpstreamName];
 
         public static string MainIncluding(string site) => $"events {{}}\nhttp {{\n    include {site};\n}}\n";
+    }
+
+    public static class Values
+    {
+        public const string KeepAliveTimeout = "keepalive_timeout";
+        public const string Location = "location";
+        public const string Listen = "listen";
+        public const int DefaultPort = 80;
+
+        public static readonly string[] TimeTexts = ["65", "500ms", "90s", "2m", "3h", "2d", "1w", "1M", "1y", "1h30m", "1h 30m 15s"];
+        public static readonly TimeSpan?[] Times =
+        [
+            TimeSpan.FromSeconds(65), TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(90), TimeSpan.FromMinutes(2),
+            TimeSpan.FromHours(3), TimeSpan.FromDays(2), TimeSpan.FromDays(7), TimeSpan.FromDays(30), TimeSpan.FromDays(365),
+            TimeSpan.FromMinutes(90), new TimeSpan(1, 30, 15),
+        ];
+        public static readonly string[] NotTimes = ["x", "5q", "s", "1.5s", "-1s", "99999999999999999y"];
+        public static readonly TimeSpan[] TimesToWrite =
+            [TimeSpan.Zero, TimeSpan.FromSeconds(65), TimeSpan.FromMinutes(90) + TimeSpan.FromMilliseconds(250), TimeSpan.FromDays(30)];
+        public static readonly string[] WrittenTimes = ["0s", "1m5s", "1h30m250ms", "30d"];
+
+        public static readonly string[] SizeTexts = ["0", "512", "8k", "8K", "50m", "50M", "1g", "1G"];
+        public static readonly long[] SizeBytes = [0, 512, 8192, 8192, 52428800, 52428800, 1073741824, 1073741824];
+        public static readonly string[] NotSizes = ["", "k", "-1", "+1", "1.5m", "10x", "99999999999g"];
+        public static readonly Size[] SizesToWrite =
+            [Size.FromBytes(0), Size.FromBytes(1536), Size.FromKilobytes(1024), Size.FromMegabytes(50), Size.FromGigabytes(2)];
+        public static readonly string[] WrittenSizes = ["0", "1536", "1m", "50m", "2g"];
+
+        public static readonly string[][] LocationArguments =
+            [["/api"], ["=", "/exact"], ["=/glued"], ["^~/static/"], ["~*\\.png$"], ["~\\.php$"], ["~", "\\.js$"], ["@fallback"], ["="]];
+        public static readonly (LocationModifier, string)[] LocationKeys =
+        [
+            (LocationModifier.None, "/api"), (LocationModifier.Exact, "/exact"), (LocationModifier.Exact, "/glued"),
+            (LocationModifier.PreferPrefix, "/static/"), (LocationModifier.RegexIgnoreCase, "\\.png$"),
+            (LocationModifier.Regex, "\\.php$"), (LocationModifier.Regex, "\\.js$"), (LocationModifier.None, "@fallback"),
+            (LocationModifier.None, "="),
+        ];
+
+        public static readonly string[] FullListenArguments = ["127.0.0.1:443", "default", "ssl", "backlog=512", "http2", "ipv6only=off", "reuseport"];
+        public static readonly Listen FullListen = new()
+        {
+            Address = "127.0.0.1", Port = 443, DefaultServer = true, Ssl = true, Http2 = true, ReusePort = true, Ipv6Only = false,
+            Parameters = ["backlog=512"],
+        };
+        public static readonly string[] WrittenFullListen = ["127.0.0.1:443", "ssl", "http2", "default_server", "reuseport", "ipv6only=off", "backlog=512"];
+        public static readonly string[] Ipv6WithoutPortArguments = ["[::1]"];
+        public static readonly Listen Ipv6WithoutPort = new() { Address = "[::1]" };
     }
 
     public static class Formats

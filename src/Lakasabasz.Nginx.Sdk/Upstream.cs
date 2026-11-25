@@ -8,6 +8,10 @@ public sealed class Upstream : Section
 {
     internal const string Keyword = "upstream";
 
+    private const string UpstreamServerName = "server";
+    private const string KeepAliveName = "keepalive";
+    private const string KeepAliveTimeoutName = "keepalive_timeout";
+
     /// <summary>A loose upstream, e.g. <c>new Upstream("backend")</c>, in no file until it is added to an <see cref="UpstreamCollection"/>.</summary>
     public Upstream(string name)
         : base(Keyword, name)
@@ -24,5 +28,22 @@ public sealed class Upstream : Section
     {
         get => Node.Arguments.Count == 1 ? Node.Arguments[0] : throw DirectiveValues.Unreadable(Node, "one name");
         set => Node.SetArguments([value]);
+    }
+
+    /// <summary>The servers of the group, one per <c>server</c> directive.</summary>
+    public IList<UpstreamServer> Servers => new DirectiveList<UpstreamServer>(Block, UpstreamServerName, UpstreamServer.Read, server => server.ToArguments());
+
+    /// <summary>The idle connections to the servers each worker keeps open (<c>keepalive</c>).</summary>
+    public int? KeepAlive
+    {
+        get => DirectiveValues.Get(Block, KeepAliveName, DirectiveValues.Number);
+        set => DirectiveValues.Set(Block, KeepAliveName, DirectiveValues.Number, value);
+    }
+
+    /// <summary>How long an idle connection to a server stays open (<c>keepalive_timeout</c>).</summary>
+    public TimeSpan? KeepAliveTimeout
+    {
+        get => DirectiveValues.Get(Block, KeepAliveTimeoutName, DirectiveValues.Time);
+        set => DirectiveValues.Set(Block, KeepAliveTimeoutName, DirectiveValues.Time, value);
     }
 }

@@ -22,24 +22,18 @@ public sealed class FileSectionsTests : TestTemplate
 
     private NginxFile Main => _nginx.Config.All.Single();
 
-    private static IEnumerable<string> NamesOf(Server server) =>
-        server.Directives.Where(d => d.Name == Consts.Sections.ServerName).SelectMany(d => d.Arguments);
-
-    private static bool ListensWithSsl(Server server) =>
-        server.Directives.Any(d => d.Name == Consts.Sections.Listen && d.Arguments.Contains(Consts.Sections.Ssl));
-
     #endregion
 
     [Test]
     [Description("The servers and upstreams of a file include those in its http block, so a search over all files finds every server.")]
     public void ListsSectionsInHttp()
     {
-        var sslServers = _nginx.Config.All.SelectMany(f => f.Servers).Where(ListensWithSsl);
+        var sslServers = _nginx.Config.All.SelectMany(f => f.Servers).Where(s => s.SslPorts.Count > 0);
 
         Assert.Multiple(() =>
         {
-            Assert.That(sslServers.SelectMany(NamesOf), Is.EqualTo(Consts.Sections.SslServerNames), "The ssl server in http should be found");
-            Assert.That(Main.Servers.SelectMany(NamesOf), Is.EqualTo(Consts.Sections.MainServerNames), "The file should list both servers of http");
+            Assert.That(sslServers.SelectMany(s => s.Names), Is.EqualTo(Consts.Sections.SslServerNames), "The ssl server in http should be found");
+            Assert.That(Main.Servers.SelectMany(s => s.Names), Is.EqualTo(Consts.Sections.MainServerNames), "The file should list both servers of http");
             Assert.That(Main.Servers, Is.EqualTo(Main.Http!.Servers), "The file's servers should be the same objects as those of http");
             Assert.That(Main.Upstreams.Single().Name, Is.EqualTo(Consts.Sections.UpstreamName), "The upstream in http should be found");
         });
@@ -49,11 +43,9 @@ public sealed class FileSectionsTests : TestTemplate
     [Description("A server or upstream added to a file with an http block goes into it, where nginx accepts it; one removed from the file leaves http.")]
     public async Task AddsIntoHttp()
     {
-        var server = Main.Servers.Add();
-        server.Directives.Add(Consts.Sections.ServerName, Consts.Sections.AddedServerName);
-        server.Directives.Add(Consts.Sections.Listen, Consts.Sections.AddedServerPort);
+        Main.Servers.Add(new Server { Names = { Consts.Sections.AddedServerName }, Listens = { new Listen { Port = Consts.Sections.AddedServerPort } } });
         Main.Upstreams.AddFromText(Consts.Sections.AddedUpstreamName, Consts.Sections.UpstreamText);
-        var removed = Main.Servers.Remove(Main.Servers.Single(s => NamesOf(s).Contains(Consts.Sections.PlainServerName)));
+        var removed = Main.Servers.Remove(Main.Servers.Single(s => s.Names.Contains(Consts.Sections.PlainServerName)));
 
         var result = await NginxControl.TestAsync(Main, WorkDirectory);
 

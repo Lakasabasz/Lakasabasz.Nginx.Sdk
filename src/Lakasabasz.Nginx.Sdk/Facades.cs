@@ -9,7 +9,7 @@ namespace Lakasabasz.Nginx.Sdk;
 /// is the same <see cref="NginxFile"/>, <see cref="Directive"/> or <see cref="Section"/> wherever it is reached. Kept
 /// here, in the public layer: the internal objects do not know their views.
 /// </summary>
-/// <remarks>A block directive has two views: the generic <see cref="Directive"/> and its section.</remarks>
+/// <remarks>A block directive has two views: the generic <see cref="Directive"/> and its typed section.</remarks>
 internal static class Facades
 {
     private static readonly ConditionalWeakTable<ConfigDocument, NginxFile> Files = new();

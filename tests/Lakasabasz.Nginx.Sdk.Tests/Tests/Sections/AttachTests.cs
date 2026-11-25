@@ -18,14 +18,12 @@ public sealed class AttachTests : TestTemplate
 
     private static NginxFile NewSite(string name) => Nginx.Init().Config.SitesAvailable.Create(name);
 
-    private static Server LooseServer()
+    private static Server LooseServer() => new()
     {
-        var server = new Server();
-        server.Directives.Add(Consts.Sections.ServerName, Consts.Sections.AttachName);
-        server.Directives.Add(Consts.Sections.Listen, Consts.Sections.AttachPort);
-        server.Locations.Add(Consts.Sections.RootPath).Directives.Add(Consts.Sections.Root, Consts.Sections.WebRoot);
-        return server;
-    }
+        Names = { Consts.Sections.AttachName },
+        Listens = { new Listen { Port = Consts.Sections.AttachPort } },
+        Locations = { new Location(Consts.Sections.RootPath) { Root = Consts.Sections.WebRoot } },
+    };
 
     #endregion
 
@@ -54,8 +52,8 @@ public sealed class AttachTests : TestTemplate
         var server = _site.Servers.Add(LooseServer());
         _site.Serialize();
 
-        server.Directives.Set(Consts.Sections.ServerName, Consts.Sections.AttachName, Consts.Sections.AttachAlias);
-        server.Locations.Single().Directives.Set(Consts.Sections.Root, Consts.Sections.OtherWebRoot);
+        server.Names.Add(Consts.Sections.AttachAlias);
+        server.Locations.Single().Root = Consts.Sections.OtherWebRoot;
 
         Assert.That(_site.Serialize(), Is.EqualTo(Expected.AttachChanged), "The name and the root should change in place, nothing added twice");
     }

@@ -8,6 +8,7 @@
     <Project Path="examples/Examples.GenericDirectives/Examples.GenericDirectives.csproj" />
     <Project Path="examples/Examples.ManageFiles/Examples.ManageFiles.csproj" />
     <Project Path="examples/Examples.NginxText/Examples.NginxText.csproj" />
+    <Project Path="examples/Examples.Properties/Examples.Properties.csproj" />
     <Project Path="examples/Examples.ReadConfig/Examples.ReadConfig.csproj" />
   </Folder>
   <Folder Name="/tests/">

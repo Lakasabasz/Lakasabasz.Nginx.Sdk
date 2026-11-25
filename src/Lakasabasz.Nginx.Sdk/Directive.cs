@@ -7,7 +7,8 @@ namespace Lakasabasz.Nginx.Sdk;
 /// One directive of a config file, e.g. <c>listen 80;</c>, or a block directive such as <c>server { … }</c>.
 /// </summary>
 /// <remarks>
-/// The raw access to any directive, also one of a module outside nginx. A directive loaded from a file keeps its original text: it is written back
+/// The raw access to any directive, also one with no typed property (e.g. of a module outside nginx): typed changes
+/// of other directives leave it as it is. A directive loaded from a file keeps its original text: it is written back
 /// exactly as it was until its arguments change. A raw block (e.g. <c>content_by_lua_block { … }</c>) keeps its body as opaque text in
 /// <see cref="RawContent"/>; it is never parsed.
 /// </remarks>

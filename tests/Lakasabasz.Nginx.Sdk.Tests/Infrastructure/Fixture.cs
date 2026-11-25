@@ -27,6 +27,16 @@ public static class Expected
 
     public static string CrlfAdded => Fixture.Read(Consts.Fixtures.CrlfAdded);
 
+    public static string Properties => Fixture.Read(Consts.Fixtures.Properties);
+
+    public static string PropertiesRemoved => Fixture.Read(Consts.Fixtures.PropertiesRemoved);
+
+    public static string NamesChanged => Fixture.Read(Consts.Fixtures.NamesChanged);
+
+    public static string ListenReplaced => Fixture.Read(Consts.Fixtures.ListenReplaced);
+
+    public static string CustomKept => Fixture.Read(Consts.Fixtures.CustomKept);
+
     public static string AttachAdded => Fixture.Read(Consts.Fixtures.AttachAdded);
 
     public static string AttachChanged => Fixture.Read(Consts.Fixtures.AttachChanged);
@@ -34,6 +44,12 @@ public static class Expected
     public static string TextServer => Fixture.Read(Consts.Fixtures.TextServer);
 
     public static string TextLocationAndUpstream => Fixture.Read(Consts.Fixtures.TextLocationAndUpstream);
+
+    public static string Switched => Fixture.Read(Consts.Fixtures.Switched);
+
+    public static string IndexExtended => Fixture.Read(Consts.Fixtures.IndexExtended);
+
+    public static string PropertiesRenamed => Fixture.Read(Consts.Fixtures.PropertiesRenamed);
 
     public static string MainAdded => Fixture.Read(Consts.Fixtures.MainAdded);
 }

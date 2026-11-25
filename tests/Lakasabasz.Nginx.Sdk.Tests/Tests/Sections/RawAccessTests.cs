@@ -32,4 +32,19 @@ public sealed class RawAccessTests : TestTemplate
             Assert.That(Server.Directive.Text, Is.EqualTo(Fixture.Read(Consts.Fixtures.Custom).TrimEnd()), "The server's text should be the whole block as written");
         });
     }
+
+    [Test]
+    [Description("Typed changes of a server leave a directive of a module outside nginx as it was written, byte for byte.")]
+    public void TypedChangesKeepCustom()
+    {
+        Server.Names.Add(Consts.Sections.AddedName);
+        Server.Root = Consts.Sections.WebRoot;
+        Server.Listens.Clear();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Custom.Arguments, Is.EqualTo(Consts.Sections.CustomArguments), "The custom directive should keep its arguments");
+            Assert.That(_file.Serialize(), Is.EqualTo(Expected.CustomKept), "Only the typed directives should change");
+        });
+    }
 }
