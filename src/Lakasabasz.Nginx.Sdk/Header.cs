@@ -17,7 +17,7 @@ public sealed record Header(string Name, string Value)
     {
         [var name, var value] => new Header(name, value),
         [var name, var value, AlwaysFlag] => new Header(name, value) { Always = true },
-        _ => throw DirectiveValues.NotA(directive, "a header: a name, a value and optionally always"),
+        _ => throw DirectiveValues.Unreadable(directive, "a header: a name, a value and optionally always"),
     };
 
     internal IReadOnlyList<string> ToArguments() => Always ? [Name, Value, AlwaysFlag] : [Name, Value];

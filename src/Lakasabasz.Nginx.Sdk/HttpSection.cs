@@ -46,22 +46,22 @@ public abstract class HttpSection : Section
     /// <summary>The largest request body (<c>client_max_body_size</c>); 0 means no limit.</summary>
     public Size? ClientMaxBodySize
     {
-        get => DirectiveValues.GetSize(Block, ClientMaxBodySizeName);
-        set => DirectiveValues.SetSize(Block, ClientMaxBodySizeName, value);
+        get => DirectiveValues.Get(Block, ClientMaxBodySizeName, DirectiveValues.Size);
+        set => DirectiveValues.Set(Block, ClientMaxBodySizeName, DirectiveValues.Size, value);
     }
 
     /// <summary>The nginx version in error pages and the <c>Server</c> header (<c>server_tokens on|off</c>).</summary>
     public bool? ServerTokens
     {
-        get => DirectiveValues.GetSwitch(Block, ServerTokensName);
-        set => DirectiveValues.SetSwitch(Block, ServerTokensName, value);
+        get => DirectiveValues.Get(Block, ServerTokensName, DirectiveValues.Switch);
+        set => DirectiveValues.Set(Block, ServerTokensName, DirectiveValues.Switch, value);
     }
 
     /// <summary>How long an idle keep-alive connection stays open (<c>keepalive_timeout</c>).</summary>
     public TimeSpan? KeepAliveTimeout
     {
-        get => DirectiveValues.GetTime(Block, KeepAliveTimeoutName);
-        set => DirectiveValues.SetTime(Block, KeepAliveTimeoutName, value);
+        get => DirectiveValues.Get(Block, KeepAliveTimeoutName, DirectiveValues.Time);
+        set => DirectiveValues.Set(Block, KeepAliveTimeoutName, DirectiveValues.Time, value);
     }
 
     /// <summary>The content type of a response whose extension has no type (<c>default_type</c>).</summary>
@@ -74,15 +74,15 @@ public abstract class HttpSection : Section
     /// <summary>Files are sent by the kernel (<c>sendfile on|off</c>).</summary>
     public bool? SendFile
     {
-        get => DirectiveValues.GetSwitch(Block, SendFileName);
-        set => DirectiveValues.SetSwitch(Block, SendFileName, value);
+        get => DirectiveValues.Get(Block, SendFileName, DirectiveValues.Switch);
+        set => DirectiveValues.Set(Block, SendFileName, DirectiveValues.Switch, value);
     }
 
     /// <summary>Responses are compressed (<c>gzip on|off</c>).</summary>
     public bool? Gzip
     {
-        get => DirectiveValues.GetSwitch(Block, GzipName);
-        set => DirectiveValues.SetSwitch(Block, GzipName, value);
+        get => DirectiveValues.Get(Block, GzipName, DirectiveValues.Switch);
+        set => DirectiveValues.Set(Block, GzipName, DirectiveValues.Switch, value);
     }
 
     /// <summary>The response headers added here (<c>add_header</c>), one per directive.</summary>
@@ -100,5 +100,5 @@ public abstract class HttpSection : Section
 
     private static string ReadInclude(StructureDirective directive) => directive.Arguments.Count == 1
         ? directive.Arguments[0]
-        : throw DirectiveValues.NotA(directive, "one file");
+        : throw DirectiveValues.Unreadable(directive, "one file");
 }

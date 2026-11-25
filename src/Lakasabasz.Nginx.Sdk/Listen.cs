@@ -84,7 +84,7 @@ public sealed record Listen
     {
         var arguments = directive.Arguments;
         if (arguments.Count == 0)
-            throw Views.DirectiveValues.NotA(directive, "an address or port");
+            throw Views.DirectiveValues.Unreadable(directive, "an address or port");
 
         var listen = AddressOf(arguments[0]);
         var parameters = new List<string>();

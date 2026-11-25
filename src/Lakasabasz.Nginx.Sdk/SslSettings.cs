@@ -44,8 +44,8 @@ public sealed class SslSettings
     /// <summary>The server's order of ciphers wins over the client's (<c>ssl_prefer_server_ciphers on|off</c>).</summary>
     public bool? PreferServerCiphers
     {
-        get => DirectiveValues.GetSwitch(_block, PreferServerCiphersName);
-        set => DirectiveValues.SetSwitch(_block, PreferServerCiphersName, value);
+        get => DirectiveValues.Get(_block, PreferServerCiphersName, DirectiveValues.Switch);
+        set => DirectiveValues.Set(_block, PreferServerCiphersName, DirectiveValues.Switch, value);
     }
 
     /// <summary>The cache of TLS sessions, e.g. <c>shared:SSL:10m</c> (<c>ssl_session_cache</c>).</summary>
@@ -58,7 +58,7 @@ public sealed class SslSettings
     /// <summary>How long a TLS session can be reused (<c>ssl_session_timeout</c>).</summary>
     public TimeSpan? SessionTimeout
     {
-        get => DirectiveValues.GetTime(_block, SessionTimeoutName);
-        set => DirectiveValues.SetTime(_block, SessionTimeoutName, value);
+        get => DirectiveValues.Get(_block, SessionTimeoutName, DirectiveValues.Time);
+        set => DirectiveValues.Set(_block, SessionTimeoutName, DirectiveValues.Time, value);
     }
 }

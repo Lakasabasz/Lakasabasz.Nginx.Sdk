@@ -51,7 +51,7 @@ public sealed record UpstreamServer(string Address)
     internal static UpstreamServer Read(StructureDirective directive)
     {
         if (directive.Arguments.Count == 0)
-            throw DirectiveValues.NotA(directive, "an address");
+            throw DirectiveValues.Unreadable(directive, "an address");
 
         var server = new UpstreamServer(directive.Arguments[0]);
         var parameters = new List<string>();
@@ -90,9 +90,9 @@ public sealed record UpstreamServer(string Address)
     {
         BackupFlag => server with { Backup = true },
         DownFlag => server with { Down = true },
-        _ when ValueOf(argument, WeightPrefix) is { } text && DirectiveValues.TryParseNumber(text, out var weight) => server with { Weight = weight },
-        _ when ValueOf(argument, MaxConnectionsPrefix) is { } text && DirectiveValues.TryParseNumber(text, out var max) => server with { MaxConnections = max },
-        _ when ValueOf(argument, MaxFailsPrefix) is { } text && DirectiveValues.TryParseNumber(text, out var fails) => server with { MaxFails = fails },
+        _ when ValueOf(argument, WeightPrefix) is { } text && DirectiveValues.Number.TryParse(text, out var weight) => server with { Weight = weight },
+        _ when ValueOf(argument, MaxConnectionsPrefix) is { } text && DirectiveValues.Number.TryParse(text, out var max) => server with { MaxConnections = max },
+        _ when ValueOf(argument, MaxFailsPrefix) is { } text && DirectiveValues.Number.TryParse(text, out var fails) => server with { MaxFails = fails },
         _ when ValueOf(argument, FailTimeoutPrefix) is { } text && NginxTime.TryParse(text, out var timeout) => server with { FailTimeout = timeout },
         _ => null,
     };

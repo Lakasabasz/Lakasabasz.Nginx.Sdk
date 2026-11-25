@@ -36,7 +36,7 @@ public sealed class Http : HttpSection
     /// </summary>
     public bool? TcpNoPush
     {
-        get => DirectiveValues.GetSwitch(Block, TcpNoPushName);
-        set => DirectiveValues.SetSwitch(Block, TcpNoPushName, value);
+        get => DirectiveValues.Get(Block, TcpNoPushName, DirectiveValues.Switch);
+        set => DirectiveValues.Set(Block, TcpNoPushName, DirectiveValues.Switch, value);
     }
 }

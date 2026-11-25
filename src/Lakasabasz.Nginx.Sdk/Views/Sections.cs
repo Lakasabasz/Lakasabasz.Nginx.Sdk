@@ -10,16 +10,14 @@ internal static class Sections
         where T : Section => FirstOf(block, name) is { } directive ? Facades.Of(directive, create) : null;
 
     /// <summary>
-    /// Makes <paramref name="section"/> the only block of the name: the others are removed, a loose section is added
-    /// at the end. <see langword="null"/> removes them all.
+    /// Makes <paramref name="section"/> the only block of the name: the others are removed; a section not in this block
+    /// yet is added at the end, one already in it stays where it is. <see langword="null"/> removes them all.
     /// </summary>
     public static void Set(StructureBlock block, string name, Section? section)
     {
-        if (section is not null && FirstOf(block, name) == section.Node)
-            return;
-        foreach (var directive in block.Directives.Where(directive => IsSection(directive, name)).ToList())
-            block.Remove(directive).OrThrow();
-        if (section is not null)
+        foreach (var other in block.Directives.Where(directive => IsSection(directive, name) && directive != section?.Node).ToList())
+            block.Remove(other).OrThrow();
+        if (section is not null && section.Node.Parent != block)
             block.Attach(section.Node).OrThrow();
     }
 

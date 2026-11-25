@@ -26,15 +26,15 @@ public sealed class Events : Section
     /// <summary>The most connections a worker process has open at once (<c>worker_connections</c>).</summary>
     public int? WorkerConnections
     {
-        get => DirectiveValues.GetNumber(Block, WorkerConnectionsName);
-        set => DirectiveValues.SetNumber(Block, WorkerConnectionsName, value);
+        get => DirectiveValues.Get(Block, WorkerConnectionsName, DirectiveValues.Number);
+        set => DirectiveValues.Set(Block, WorkerConnectionsName, DirectiveValues.Number, value);
     }
 
     /// <summary>A worker accepts all new connections at once (<c>multi_accept on|off</c>).</summary>
     public bool? MultiAccept
     {
-        get => DirectiveValues.GetSwitch(Block, MultiAcceptName);
-        set => DirectiveValues.SetSwitch(Block, MultiAcceptName, value);
+        get => DirectiveValues.Get(Block, MultiAcceptName, DirectiveValues.Switch);
+        set => DirectiveValues.Set(Block, MultiAcceptName, DirectiveValues.Switch, value);
     }
 
     /// <summary>The connection processing method, e.g. <c>epoll</c> (<c>use</c>); nginx picks the best one without it.</summary>

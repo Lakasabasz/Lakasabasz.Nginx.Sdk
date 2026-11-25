@@ -26,7 +26,7 @@ public sealed class Upstream : Section
     /// <summary>The name used in <c>proxy_pass http://name</c>.</summary>
     public string Name
     {
-        get => Node.Arguments.Count == 1 ? Node.Arguments[0] : throw DirectiveValues.NotA(Node, "one name");
+        get => Node.Arguments.Count == 1 ? Node.Arguments[0] : throw DirectiveValues.Unreadable(Node, "one name");
         set => Node.SetArguments([value]);
     }
 
@@ -36,14 +36,14 @@ public sealed class Upstream : Section
     /// <summary>The idle connections to the servers each worker keeps open (<c>keepalive</c>).</summary>
     public int? KeepAlive
     {
-        get => DirectiveValues.GetNumber(Block, KeepAliveName);
-        set => DirectiveValues.SetNumber(Block, KeepAliveName, value);
+        get => DirectiveValues.Get(Block, KeepAliveName, DirectiveValues.Number);
+        set => DirectiveValues.Set(Block, KeepAliveName, DirectiveValues.Number, value);
     }
 
     /// <summary>How long an idle connection to a server stays open (<c>keepalive_timeout</c>).</summary>
     public TimeSpan? KeepAliveTimeout
     {
-        get => DirectiveValues.GetTime(Block, KeepAliveTimeoutName);
-        set => DirectiveValues.SetTime(Block, KeepAliveTimeoutName, value);
+        get => DirectiveValues.Get(Block, KeepAliveTimeoutName, DirectiveValues.Time);
+        set => DirectiveValues.Set(Block, KeepAliveTimeoutName, DirectiveValues.Time, value);
     }
 }

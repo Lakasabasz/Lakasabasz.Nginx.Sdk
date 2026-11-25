@@ -73,7 +73,7 @@ public sealed class Location : HttpSection
         set => Sections.Set(Block, Sdk.LimitExcept.Keyword, value);
     }
 
-    private LocationKey Key => LocationKey.Read(Node.Arguments) ?? throw DirectiveValues.NotA(Node, "a path with an optional modifier");
+    private LocationKey Key => LocationKey.Read(Node.Arguments) ?? throw DirectiveValues.Unreadable(Node, "a path with an optional modifier");
 
     internal static string[] ArgumentsOf(LocationModifier modifier, string path) => new LocationKey(modifier, path).ToArguments();
 }
