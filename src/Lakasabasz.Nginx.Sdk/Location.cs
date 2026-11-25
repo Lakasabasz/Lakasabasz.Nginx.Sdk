@@ -75,5 +75,5 @@ public sealed class Location : HttpSection
 
     private LocationKey Key => LocationKey.Read(Node.Arguments) ?? throw DirectiveValues.NotA(Node, "a path with an optional modifier");
 
-    internal static string[] ArgumentsOf(LocationModifier modifier, string path) => new LocationKey(modifier, path).Arguments();
+    internal static string[] ArgumentsOf(LocationModifier modifier, string path) => new LocationKey(modifier, path).ToArguments();
 }

@@ -86,7 +86,7 @@ public abstract class HttpSection : Section
     }
 
     /// <summary>The response headers added here (<c>add_header</c>), one per directive.</summary>
-    public IList<Header> Headers => new DirectiveList<Header>(Block, AddHeaderName, Header.Read, header => header.Arguments());
+    public IList<Header> Headers => new DirectiveList<Header>(Block, AddHeaderName, Header.Read, header => header.ToArguments());
 
     /// <summary>How requests are passed to a proxied server (<c>proxy_*</c>).</summary>
     public ProxySettings Proxy => new(Block);

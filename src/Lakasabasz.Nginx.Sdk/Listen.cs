@@ -16,9 +16,24 @@ public sealed record Listen
     private const string QuicFlag = "quic";
     private const string ProxyProtocolFlag = "proxy_protocol";
     private const string ReusePortFlag = "reuseport";
-    private const string Ipv6OnlyParameter = "ipv6only=";
+    private const string Ipv6OnlyOn = "ipv6only=on";
+    private const string Ipv6OnlyOff = "ipv6only=off";
+    private const string Ipv6Start = "[";
+    private const string Ipv6End = "]";
+    private const string PortSeparator = ":";
     private const string UnixPrefix = "unix:";
     private const int DefaultPort = 80;
+
+    /// <summary>The flags of <c>listen</c>, in the order they are written.</summary>
+    private static readonly (string Text, Func<Listen, bool> IsSet, Func<Listen, Listen> Set)[] Flags =
+    [
+        (SslFlag, listen => listen.Ssl, listen => listen with { Ssl = true }),
+        (Http2Flag, listen => listen.Http2, listen => listen with { Http2 = true }),
+        (QuicFlag, listen => listen.Quic, listen => listen with { Quic = true }),
+        (ProxyProtocolFlag, listen => listen.ProxyProtocol, listen => listen with { ProxyProtocol = true }),
+        (DefaultServerFlag, listen => listen.DefaultServer, listen => listen with { DefaultServer = true }),
+        (ReusePortFlag, listen => listen.ReusePort, listen => listen with { ReusePort = true }),
+    ];
 
     /// <summary>The address without the port, e.g. <c>127.0.0.1</c>, <c>[::]</c>, <c>*</c> or <c>unix:/run/site.sock</c>; <see langword="null"/> for all addresses.</summary>
     public string? Address { get; init; }
@@ -75,38 +90,33 @@ public sealed record Listen
         var parameters = new List<string>();
         foreach (var argument in arguments.Skip(1))
         {
-            listen = argument switch
-            {
-                DefaultServerFlag or LegacyDefaultFlag => listen with { DefaultServer = true },
-                SslFlag => listen with { Ssl = true },
-                Http2Flag => listen with { Http2 = true },
-                QuicFlag => listen with { Quic = true },
-                ProxyProtocolFlag => listen with { ProxyProtocol = true },
-                ReusePortFlag => listen with { ReusePort = true },
-                Ipv6OnlyParameter + "on" => listen with { Ipv6Only = true },
-                Ipv6OnlyParameter + "off" => listen with { Ipv6Only = false },
-                _ => listen,
-            };
-            if (!IsKnown(argument))
+            if (WithFlag(listen, argument) is { } flagged)
+                listen = flagged;
+            else
                 parameters.Add(argument);
         }
         return listen with { Parameters = parameters };
     }
 
-    internal IReadOnlyList<string> Arguments()
+    /// <summary>The arguments of the <c>listen</c> directive: the address, the flags set (in <see cref="Flags"/> order), the rest.</summary>
+    internal IReadOnlyList<string> ToArguments()
     {
         var arguments = new List<string> { AddressText() };
-        AddIf(arguments, Ssl, SslFlag);
-        AddIf(arguments, Http2, Http2Flag);
-        AddIf(arguments, Quic, QuicFlag);
-        AddIf(arguments, ProxyProtocol, ProxyProtocolFlag);
-        AddIf(arguments, DefaultServer, DefaultServerFlag);
-        AddIf(arguments, ReusePort, ReusePortFlag);
+        arguments.AddRange(Flags.Where(flag => flag.IsSet(this)).Select(flag => flag.Text));
         if (Ipv6Only is { } ipv6Only)
-            arguments.Add(Ipv6OnlyParameter + (ipv6Only ? "on" : "off"));
+            arguments.Add(ipv6Only ? Ipv6OnlyOn : Ipv6OnlyOff);
         arguments.AddRange(Parameters);
         return arguments;
     }
+
+    /// <summary>The listen with one more known flag set; <see langword="null"/> for an argument that is not one.</summary>
+    private static Listen? WithFlag(Listen listen, string argument) => argument switch
+    {
+        LegacyDefaultFlag => listen with { DefaultServer = true },
+        Ipv6OnlyOn => listen with { Ipv6Only = true },
+        Ipv6OnlyOff => listen with { Ipv6Only = false },
+        _ => Flags.Where(flag => flag.Text == argument).Select(flag => flag.Set(listen)).FirstOrDefault(),
+    };
 
     /// <summary>The address and port of <c>listen</c>: <c>80</c>, <c>127.0.0.1:8080</c>, <c>[::]:443</c>, <c>localhost</c>, <c>unix:…</c>.</summary>
     private static Listen AddressOf(string text)
@@ -115,11 +125,26 @@ public sealed record Listen
             return new Listen { Address = text };
         if (ParsePort(text) is { } port)
             return new Listen { Port = port };
+        var (address, addressPort) = text.StartsWith(Ipv6Start, StringComparison.Ordinal) ? SplitIpv6(text) : SplitHost(text);
+        return new Listen { Address = address, Port = addressPort };
+    }
 
-        var portStart = text.StartsWith("[", StringComparison.Ordinal) ? text.IndexOf("]:", StringComparison.Ordinal) + 1 : text.LastIndexOf(':');
-        if (portStart > 0 && ParsePort(text.Substring(portStart + 1)) is { } addressPort)
-            return new Listen { Address = text.Substring(0, portStart), Port = addressPort };
-        return new Listen { Address = text };
+    /// <summary><c>[::1]:8080</c> → <c>[::1]</c> and 8080; <c>[::1]</c> → no port.</summary>
+    private static (string Address, int? Port) SplitIpv6(string text)
+    {
+        var end = text.IndexOf(Ipv6End, StringComparison.Ordinal) + 1;
+        var address = end > 0 ? text.Substring(0, end) : text;
+        var rest = text.Substring(address.Length);
+        return (address, rest.StartsWith(PortSeparator, StringComparison.Ordinal) ? ParsePort(rest.Substring(1)) : null);
+    }
+
+    /// <summary><c>127.0.0.1:8080</c> → <c>127.0.0.1</c> and 8080; <c>localhost</c> → no port.</summary>
+    private static (string Address, int? Port) SplitHost(string text)
+    {
+        var separator = text.LastIndexOf(PortSeparator, StringComparison.Ordinal);
+        if (separator < 0 || ParsePort(text.Substring(separator + 1)) is not { } port)
+            return (text, null);
+        return (text.Substring(0, separator), port);
     }
 
     private static int? ParsePort(string text) =>
@@ -127,18 +152,11 @@ public sealed record Listen
 
     private string AddressText() => (Address, Port) switch
     {
-        (null, null) => "80",
-        (null, { } port) => port.ToString(CultureInfo.InvariantCulture),
+        (null, null) => Number(DefaultPort),
+        (null, { } port) => Number(port),
         ({ } address, null) => address,
-        ({ } address, { } port) => address + ":" + port.ToString(CultureInfo.InvariantCulture),
+        ({ } address, { } port) => address + PortSeparator + Number(port),
     };
 
-    private static bool IsKnown(string argument) => argument is DefaultServerFlag or LegacyDefaultFlag or SslFlag or Http2Flag
-        or QuicFlag or ProxyProtocolFlag or ReusePortFlag or Ipv6OnlyParameter + "on" or Ipv6OnlyParameter + "off";
-
-    private static void AddIf(List<string> arguments, bool flag, string text)
-    {
-        if (flag)
-            arguments.Add(text);
-    }
+    private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
 }

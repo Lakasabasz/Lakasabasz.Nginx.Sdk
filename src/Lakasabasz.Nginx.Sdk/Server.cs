@@ -39,7 +39,7 @@ public sealed class Server : HttpSection
     public IList<string> Names => new ArgumentList(Block, NameName);
 
     /// <summary>The addresses and ports the server listens on, one per <c>listen</c> directive.</summary>
-    public IList<Listen> Listens => new DirectiveList<Listen>(Block, ListenName, Listen.Read, listen => listen.Arguments());
+    public IList<Listen> Listens => new DirectiveList<Listen>(Block, ListenName, Listen.Read, listen => listen.ToArguments());
 
     /// <summary>The ports of <see cref="Listens"/> (80 for a listen without a port; unix sockets have none).</summary>
     public IReadOnlyList<int> Ports => PortsOf(Listens);

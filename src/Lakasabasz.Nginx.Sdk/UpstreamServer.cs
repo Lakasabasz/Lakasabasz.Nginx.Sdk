@@ -11,10 +11,10 @@ namespace Lakasabasz.Nginx.Sdk;
 /// <param name="Address">The address with the port, e.g. <c>127.0.0.1:5000</c>, <c>backend.local</c> or <c>unix:/run/app.sock</c>.</param>
 public sealed record UpstreamServer(string Address)
 {
-    private const string WeightParameter = "weight=";
-    private const string MaxConnectionsParameter = "max_conns=";
-    private const string MaxFailsParameter = "max_fails=";
-    private const string FailTimeoutParameter = "fail_timeout=";
+    private const string WeightPrefix = "weight=";
+    private const string MaxConnectionsPrefix = "max_conns=";
+    private const string MaxFailsPrefix = "max_fails=";
+    private const string FailTimeoutPrefix = "fail_timeout=";
     private const string BackupFlag = "backup";
     private const string DownFlag = "down";
 
@@ -57,7 +57,7 @@ public sealed record UpstreamServer(string Address)
         var parameters = new List<string>();
         foreach (var argument in directive.Arguments.Skip(1))
         {
-            if (Read(server, argument) is { } read)
+            if (WithParameter(server, argument) is { } read)
                 server = read;
             else
                 parameters.Add(argument);
@@ -65,17 +65,18 @@ public sealed record UpstreamServer(string Address)
         return server with { Parameters = parameters };
     }
 
-    internal IReadOnlyList<string> Arguments()
+    /// <summary>The arguments of the <c>server</c> directive: the address, the known parameters set, the rest.</summary>
+    internal IReadOnlyList<string> ToArguments()
     {
         var arguments = new List<string> { Address };
         if (Weight is { } weight)
-            arguments.Add(WeightParameter + Number(weight));
+            arguments.Add(WeightPrefix + Number(weight));
         if (MaxConnections is { } maxConnections)
-            arguments.Add(MaxConnectionsParameter + Number(maxConnections));
+            arguments.Add(MaxConnectionsPrefix + Number(maxConnections));
         if (MaxFails is { } maxFails)
-            arguments.Add(MaxFailsParameter + Number(maxFails));
+            arguments.Add(MaxFailsPrefix + Number(maxFails));
         if (FailTimeout is { } failTimeout)
-            arguments.Add(FailTimeoutParameter + NginxTime.Format(failTimeout));
+            arguments.Add(FailTimeoutPrefix + NginxTime.Format(failTimeout));
         if (Backup)
             arguments.Add(BackupFlag);
         if (Down)
@@ -85,19 +86,19 @@ public sealed record UpstreamServer(string Address)
     }
 
     /// <summary>The server with one more known parameter; <see langword="null"/> for a parameter it does not know.</summary>
-    private static UpstreamServer? Read(UpstreamServer server, string argument) => argument switch
+    private static UpstreamServer? WithParameter(UpstreamServer server, string argument) => argument switch
     {
         BackupFlag => server with { Backup = true },
         DownFlag => server with { Down = true },
-        _ when ValueOf(argument, WeightParameter) is { } text && DirectiveValues.TryParseNumber(text, out var weight) => server with { Weight = weight },
-        _ when ValueOf(argument, MaxConnectionsParameter) is { } text && DirectiveValues.TryParseNumber(text, out var max) => server with { MaxConnections = max },
-        _ when ValueOf(argument, MaxFailsParameter) is { } text && DirectiveValues.TryParseNumber(text, out var fails) => server with { MaxFails = fails },
-        _ when ValueOf(argument, FailTimeoutParameter) is { } text && NginxTime.TryParse(text, out var timeout) => server with { FailTimeout = timeout },
+        _ when ValueOf(argument, WeightPrefix) is { } text && DirectiveValues.TryParseNumber(text, out var weight) => server with { Weight = weight },
+        _ when ValueOf(argument, MaxConnectionsPrefix) is { } text && DirectiveValues.TryParseNumber(text, out var max) => server with { MaxConnections = max },
+        _ when ValueOf(argument, MaxFailsPrefix) is { } text && DirectiveValues.TryParseNumber(text, out var fails) => server with { MaxFails = fails },
+        _ when ValueOf(argument, FailTimeoutPrefix) is { } text && NginxTime.TryParse(text, out var timeout) => server with { FailTimeout = timeout },
         _ => null,
     };
 
-    private static string? ValueOf(string argument, string parameter) =>
-        argument.StartsWith(parameter, StringComparison.Ordinal) ? argument.Substring(parameter.Length) : null;
+    private static string? ValueOf(string argument, string prefix) =>
+        argument.StartsWith(prefix, StringComparison.Ordinal) ? argument.Substring(prefix.Length) : null;
 
     private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
 }
