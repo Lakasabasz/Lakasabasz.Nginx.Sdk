@@ -34,11 +34,21 @@ public sealed class NginxFile
     /// <summary>The top-level directives of the file, read and changed by name: <c>Add</c>, <c>Set</c>, <c>Remove</c>, <c>AddBlock</c>.</summary>
     public DirectiveCollection Directives => Facades.Of(_document.Tree.Structure);
 
-    /// <summary>The <c>server</c> blocks at the top level of the file, e.g. of a site; those in <c>http</c> are in <see cref="Http"/>.</summary>
-    public ServerCollection Servers => new(_document.Tree.Structure);
+    /// <summary>
+    /// Every <c>server</c> block of the file: at its top level (a site) and in its <c>http</c> block (<c>nginx.conf</c>),
+    /// in the order of the file. A new server goes into <c>http</c> when the file has one, else at the top level.
+    /// </summary>
+    public ServerCollection Servers => new(
+        () => Sections.OfFileAndHttp(_document.Tree.Structure),
+        () => Sections.HttpTarget(_document.Tree.Structure));
 
-    /// <summary>The <c>upstream</c> blocks at the top level of the file, e.g. of a file in <c>conf.d</c>.</summary>
-    public UpstreamCollection Upstreams => new(_document.Tree.Structure);
+    /// <summary>
+    /// Every <c>upstream</c> block of the file: at its top level (a file of <c>conf.d</c>) and in its <c>http</c> block,
+    /// in the order of the file. A new upstream goes into <c>http</c> when the file has one, else at the top level.
+    /// </summary>
+    public UpstreamCollection Upstreams => new(
+        () => Sections.OfFileAndHttp(_document.Tree.Structure),
+        () => Sections.HttpTarget(_document.Tree.Structure));
 
     /// <summary>The <c>http { }</c> block, e.g. of <c>nginx.conf</c>; setting a loose one replaces it, <see langword="null"/> removes it.</summary>
     public Http? Http

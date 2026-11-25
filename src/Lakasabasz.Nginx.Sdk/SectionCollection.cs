@@ -13,13 +13,28 @@ namespace Lakasabasz.Nginx.Sdk;
 public abstract class SectionCollection<T> : IReadOnlyCollection<T>
     where T : Section
 {
-    private readonly StructureBlock _block;
+    private readonly Func<IEnumerable<StructureDirective>> _directives;
+    private readonly Func<StructureBlock> _target;
     private readonly string _name;
     private readonly Func<StructureDirective, T> _create;
 
     private protected SectionCollection(StructureBlock block, string name, Func<StructureDirective, T> create)
+        : this(() => block.Directives, () => block, name, create)
     {
-        _block = block;
+    }
+
+    /// <param name="directives">The directives the sections are found among, in order.</param>
+    /// <param name="target">The block new sections are added to.</param>
+    /// <param name="name">The name of the sections' block directive.</param>
+    /// <param name="create">Makes the section of a directive read from a file.</param>
+    private protected SectionCollection(
+        Func<IEnumerable<StructureDirective>> directives,
+        Func<StructureBlock> target,
+        string name,
+        Func<StructureDirective, T> create)
+    {
+        _directives = directives;
+        _target = target;
         _name = name;
         _create = create;
     }
@@ -27,7 +42,7 @@ public abstract class SectionCollection<T> : IReadOnlyCollection<T>
     /// <summary>Number of sections.</summary>
     public int Count => Items.Count();
 
-    private IEnumerable<T> Items => _block.Directives
+    private IEnumerable<T> Items => _directives()
         .Where(directive => directive.Name == _name && directive.Kind == DirectiveKind.Block)
         .Select(directive => Facades.Of(directive, _create));
 
@@ -36,13 +51,14 @@ public abstract class SectionCollection<T> : IReadOnlyCollection<T>
     /// <exception cref="InvalidOperationException">The section is in a file or block already.</exception>
     public T Add(T section)
     {
-        _block.Attach(section.Node).OrThrow();
+        _target().Attach(section.Node).OrThrow();
         return section;
     }
 
     /// <summary>Removes <paramref name="section"/>; it becomes loose and can be added again.</summary>
     /// <returns><see langword="false"/> when the section is not in this collection.</returns>
-    public bool Remove(T section) => _block.Remove(section.Node).OrThrow();
+    public bool Remove(T section) =>
+        Items.Contains(section) && section.Node.Parent is { } parent && parent.Remove(section.Node).OrThrow();
 
     /// <inheritdoc />
     public IEnumerator<T> GetEnumerator() => Items.GetEnumerator();
@@ -50,7 +66,7 @@ public abstract class SectionCollection<T> : IReadOnlyCollection<T>
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>A new, empty section at the end.</summary>
-    private protected T AddNew(params string[] arguments) => Facades.Of(_block.AddBlock(_name, arguments).OrThrow(), _create);
+    private protected T AddNew(params string[] arguments) => Facades.Of(_target().AddBlock(_name, arguments).OrThrow(), _create);
 
     /// <summary>A new section at the end, its body parsed from nginx <paramref name="text"/>.</summary>
     /// <exception cref="NginxParseException">The text has a syntax error.</exception>
@@ -58,15 +74,20 @@ public abstract class SectionCollection<T> : IReadOnlyCollection<T>
     {
         var body = SyntaxTree.Fragment(text).OrThrow();
         var directive = new StructureDirective(_name, arguments, DirectiveKind.Block, new StructureBlock(body), null);
-        return Facades.Of(_block.Attach(directive).OrThrow(), _create);
+        return Facades.Of(_target().Attach(directive).OrThrow(), _create);
     }
 }
 
-/// <summary>The <c>server</c> blocks of a site or of <c>http</c>.</summary>
+/// <summary>The <c>server</c> blocks of a site, of <c>http</c>, or of a whole file.</summary>
 public sealed class ServerCollection : SectionCollection<Server>
 {
     internal ServerCollection(StructureBlock block)
         : base(block, Server.Keyword, directive => new Server(directive))
+    {
+    }
+
+    internal ServerCollection(Func<IEnumerable<StructureDirective>> directives, Func<StructureBlock> target)
+        : base(directives, target, Server.Keyword, directive => new Server(directive))
     {
     }
 
@@ -102,11 +123,16 @@ public sealed class LocationCollection : SectionCollection<Location>
     public Location AddFromText(LocationModifier modifier, string path, string text) => AddParsed(text, Location.ArgumentsOf(modifier, path));
 }
 
-/// <summary>The <c>upstream</c> blocks of <c>http</c> or of a file included in it.</summary>
+/// <summary>The <c>upstream</c> blocks of <c>http</c>, of a file included in it, or of a whole file.</summary>
 public sealed class UpstreamCollection : SectionCollection<Upstream>
 {
     internal UpstreamCollection(StructureBlock block)
         : base(block, Upstream.Keyword, directive => new Upstream(directive))
+    {
+    }
+
+    internal UpstreamCollection(Func<IEnumerable<StructureDirective>> directives, Func<StructureBlock> target)
+        : base(directives, target, Upstream.Keyword, directive => new Upstream(directive))
     {
     }
 

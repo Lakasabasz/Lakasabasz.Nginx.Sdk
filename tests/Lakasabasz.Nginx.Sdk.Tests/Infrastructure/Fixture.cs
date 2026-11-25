@@ -62,4 +62,6 @@ public static class Expected
     public static string IndexExtended => Fixture.Read(Consts.Fixtures.IndexExtended);
 
     public static string PropertiesRenamed => Fixture.Read(Consts.Fixtures.PropertiesRenamed);
+
+    public static string MainAdded => Fixture.Read(Consts.Fixtures.MainAdded);
 }

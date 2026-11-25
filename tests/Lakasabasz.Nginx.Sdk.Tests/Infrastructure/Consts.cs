@@ -142,6 +142,8 @@ public static class Consts
         public const string Properties = "Sections/properties.conf";
         public const string PropertiesRemoved = "Sections/properties.removed.conf";
         public const string PropertiesRenamed = "Sections/properties.renamed.conf";
+        public const string Main = "Sections/main.conf";
+        public const string MainAdded = "Sections/main.added.conf";
         public const string Names = "Sections/names.conf";
         public const string NamesChanged = "Sections/names.changed.conf";
         public const string ListenReplaced = "Sections/names.listen-replaced.conf";
@@ -340,6 +342,12 @@ public static class Consts
         public const string IndexHtml = "index.html";
         public const string IndexHtm = "index.htm";
 
+        public const string SslServerName = "api.example.test";
+        public const string PlainServerName = "plain.example.test";
+        public const string AddedServerName = "new.example.test";
+        public const string AddedUpstreamName = "added_backend";
+        public const int AddedServerPort = 8089;
+
         public const string RenamedPath = "/v2";
         public const string RenamedUpstream = "api_backend";
         public const string RenamedUpstreamUrl = "http://api_backend";
@@ -441,6 +449,9 @@ public static class Consts
         public static readonly string[] LimitedMethods = [Get];
         public static readonly UpstreamServer[] Backends = [PrimaryBackend, BackupBackend];
         public static readonly string[] TextNames = [TextName];
+        public static readonly string[] SslServerNames = [SslServerName];
+        public static readonly string[] MainServerNames = [SslServerName, PlainServerName];
+        public static readonly string[] MainUpstreamNames = [UpstreamName, AddedUpstreamName];
 
         public static string MainIncluding(string site) => $"events {{}}\nhttp {{\n    include {site};\n}}\n";
     }
