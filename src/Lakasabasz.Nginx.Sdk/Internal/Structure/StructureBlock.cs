@@ -21,13 +21,13 @@ internal sealed class StructureBlock
             directive.Parent = this;
     }
 
-    /// <summary>The block of a simple directive: empty and not changeable.</summary>
-    public static StructureBlock NotABlock() => new([], readOnly: true);
+    /// <summary>The block of a simple directive (or of a raw one): empty and not changeable.</summary>
+    public static StructureBlock OfSimpleDirective() => new([], readOnly: true);
 
     public IReadOnlyList<StructureDirective> Directives => _nodes.OfType<StructureDirective>().ToList();
 
     /// <summary>The directives and comments, in order.</summary>
-    public IReadOnlyList<StructureNode> Nodes => _nodes;
+    public IReadOnlyList<StructureNode> Nodes => _nodes.AsReadOnly();
 
     public Result<StructureDirective, UsageError> Add(string name, IReadOnlyList<string> arguments) =>
         Attach(StructureDirective.NewSimple(name, arguments));
@@ -38,7 +38,7 @@ internal sealed class StructureBlock
     /// <summary>Adds a directive made elsewhere (a loose section) at the end; it may be in no other block.</summary>
     public Result<StructureDirective, UsageError> Attach(StructureDirective directive)
     {
-        if (ReadOnlyError() is { } error)
+        if (NotABlockError() is { } error)
             return Result<StructureDirective, UsageError>.Failure(error);
         if (directive.Parent is not null)
             return Result<StructureDirective, UsageError>.Failure(new UsageError(UsageErrorKind.InvalidOperation,
@@ -52,7 +52,7 @@ internal sealed class StructureBlock
     /// <summary>Adds a comment on a line of its own after the last directive.</summary>
     public Result<StructureComment, UsageError> AddComment(string text)
     {
-        if ((ReadOnlyError() ?? StructureComment.Check(text)) is { } error)
+        if ((NotABlockError() ?? StructureComment.LineBreakError(text)) is { } error)
             return Result<StructureComment, UsageError>.Failure(error);
         var comment = new StructureComment(text);
         _nodes.Add(comment);
@@ -76,13 +76,16 @@ internal sealed class StructureBlock
     /// <returns>How many directives called <paramref name="name"/> were removed.</returns>
     public Result<int, UsageError> Remove(string name)
     {
-        if (ReadOnlyError() is { } error)
+        if (NotABlockError() is { } error)
             return Result<int, UsageError>.Failure(error);
-        return Result<int, UsageError>.Success(Directives.Where(directive => directive.Name == name).ToList().Count(Detach));
+        var named = Directives.Where(directive => directive.Name == name).ToList();
+        foreach (var directive in named)
+            Detach(directive);
+        return Result<int, UsageError>.Success(named.Count);
     }
 
     /// <returns>Whether the directive was in this block.</returns>
-    public Result<bool, UsageError> Remove(StructureDirective directive) => ReadOnlyError() is { } error
+    public Result<bool, UsageError> Remove(StructureDirective directive) => NotABlockError() is { } error
         ? Result<bool, UsageError>.Failure(error)
         : Result<bool, UsageError>.Success(Detach(directive));
 
@@ -100,18 +103,18 @@ internal sealed class StructureBlock
             {
                 changes.Added.Add(node);
                 if (node is StructureDirective added)
-                    AcceptAll(added);
+                    AcceptWithEverythingIn(added);
                 continue;
             }
 
             if (node is not StructureDirective directive)
                 continue;
             if (directive.ArgumentsChanged)
-                changes.Changed.Add(directive);
+                changes.ArgumentsChanged.Add(directive);
             if (directive.CommentChanged)
-                changes.Commented.Add(directive);
+                changes.CommentChanged.Add(directive);
             if (directive.StyleChanged)
-                changes.Restyled.Add(directive);
+                changes.StyleChanged.Add(directive);
             directive.AcceptChanges();
             if (directive.Kind == DirectiveKind.Block)
                 changes.Nested.Add((directive, directive.Block.TakeChanges()));
@@ -122,7 +125,8 @@ internal sealed class StructureBlock
         return changes;
     }
 
-    private static void AcceptAll(StructureDirective directive)
+    /// <summary>An added directive and everything in it count as written: their changes are forgotten.</summary>
+    private static void AcceptWithEverythingIn(StructureDirective directive)
     {
         directive.AcceptChanges();
         directive.Block.TakeChanges();
@@ -138,7 +142,7 @@ internal sealed class StructureBlock
         return true;
     }
 
-    private UsageError? ReadOnlyError() => _readOnly
+    private UsageError? NotABlockError() => _readOnly
         ? new UsageError(UsageErrorKind.InvalidOperation, "Only a block directive contains directives.")
         : null;
 }

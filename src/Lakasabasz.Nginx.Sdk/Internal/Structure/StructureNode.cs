@@ -8,8 +8,8 @@ internal sealed class StructureComment(string text) : StructureNode
 {
     public string Text { get; } = text;
 
-    /// <summary>A comment is one line: it ends at the line break.</summary>
-    public static UsageError? Check(string? text) => text is not null && text.IndexOfAny(['\r', '\n']) >= 0
+    /// <summary>The error for a comment with a line break (a comment is one line); <see langword="null"/> for one without, or for none.</summary>
+    public static UsageError? LineBreakError(string? text) => text is not null && text.IndexOfAny(['\r', '\n']) >= 0
         ? new UsageError(UsageErrorKind.Argument, "A comment is one line: it cannot contain a line break.", "comment")
         : null;
 }

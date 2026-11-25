@@ -77,17 +77,17 @@ internal sealed class SyntaxBinding
         foreach (var directive in changes.Removed)
             Forget(directive);
 
-        foreach (var directive in changes.Changed)
+        foreach (var directive in changes.ArgumentsChanged)
         {
             var node = _nodes[directive];
             node.Header = HeaderOf(directive, KeptBraceSpacing(node));
             node.Arguments = directive.Arguments;
         }
 
-        foreach (var directive in changes.Commented)
+        foreach (var directive in changes.CommentChanged)
             block.SetTrailingComment(_nodes[directive], LineOf(directive.Comment), formatting, ownerIndentation);
 
-        foreach (var directive in changes.Restyled)
+        foreach (var directive in changes.StyleChanged)
         {
             var node = _nodes[directive];
             var indentation = block.IndentationOf(node);
@@ -168,7 +168,7 @@ internal sealed class SyntaxBinding
     private static void KeepStyle(StructureDirective directive, SyntaxDirective node)
     {
         if (directive.Style.OneLine && node.Block is { IsOneLine: false })
-            directive.ReadStyle(directive.Style with { OneLine = false });
+            directive.NoteWrittenStyle(directive.Style with { OneLine = false });
     }
 
     private void Forget(StructureDirective directive)

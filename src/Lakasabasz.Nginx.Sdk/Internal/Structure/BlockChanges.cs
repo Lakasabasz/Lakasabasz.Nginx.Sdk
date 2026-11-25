@@ -10,17 +10,20 @@ internal sealed class BlockChanges
     public List<StructureDirective> Removed { get; } = [];
 
     /// <summary>Directives whose arguments changed.</summary>
-    public List<StructureDirective> Changed { get; } = [];
+    public List<StructureDirective> ArgumentsChanged { get; } = [];
 
     /// <summary>Directives whose comment changed.</summary>
-    public List<StructureDirective> Commented { get; } = [];
+    public List<StructureDirective> CommentChanged { get; } = [];
 
     /// <summary>Block directives whose style changed.</summary>
-    public List<StructureDirective> Restyled { get; } = [];
+    public List<StructureDirective> StyleChanged { get; } = [];
 
     /// <summary>Directives and comments added, in order, with everything in them: they go after the last directive of the block.</summary>
     public List<StructureNode> Added { get; } = [];
 
-    /// <summary>The changes inside the blocks that were there before.</summary>
+    /// <summary>
+    /// The changes inside the blocks that were there before (an added block is in <see cref="Added"/> with everything
+    /// in it). A directive may be in several lists, e.g. with changed arguments and a changed comment.
+    /// </summary>
     public List<(StructureDirective Directive, BlockChanges Changes)> Nested { get; } = [];
 }

@@ -2,7 +2,7 @@ namespace Lakasabasz.Nginx.Sdk.Internal.Structure;
 
 /// <summary>
 /// A directive of the internal structure: its name, arguments, block, the comment after it and the style its block
-/// is written in. No formatting of its own: the syntax tree writes it.
+/// is written in. It holds no text: the style is a choice (one line, brace on a new line), the syntax tree writes it.
 /// </summary>
 internal sealed class StructureDirective : StructureNode
 {
@@ -12,7 +12,7 @@ internal sealed class StructureDirective : StructureNode
         Name = name;
         Arguments = arguments;
         Kind = kind;
-        Block = block ?? StructureBlock.NotABlock();
+        Block = block ?? StructureBlock.OfSimpleDirective();
         RawContent = rawContent;
         Line = line;
         Column = column;
@@ -32,6 +32,7 @@ internal sealed class StructureDirective : StructureNode
 
     public DirectiveKind Kind { get; }
 
+    /// <summary>Whether the directive has a body in braces: a block, or a raw block.</summary>
     public bool IsBlock => Kind != DirectiveKind.Simple;
 
     /// <summary>The directives inside the block; empty and not changeable for a simple directive or a raw block.</summary>
@@ -48,7 +49,7 @@ internal sealed class StructureDirective : StructureNode
     public int Column { get; }
 
     /// <summary>The directive as written in the file when it was read; <see langword="null"/> for one added in code.</summary>
-    public string? SourceText { get; set; }
+    public string? SourceText { get; private set; }
 
     /// <summary>The comment after the directive on its line, without <c>#</c>; <see langword="null"/> for none.</summary>
     public string? Comment { get; private set; }
@@ -71,7 +72,7 @@ internal sealed class StructureDirective : StructureNode
 
     public Result<StructureDirective, UsageError> SetComment(string? comment)
     {
-        if (StructureComment.Check(comment) is { } error)
+        if (StructureComment.LineBreakError(comment) is { } error)
             return Result<StructureDirective, UsageError>.Failure(error);
         Comment = comment;
         CommentChanged = true;
@@ -84,7 +85,7 @@ internal sealed class StructureDirective : StructureNode
         StyleChanged = true;
     }
 
-    /// <summary>The comment and style as read from a file: not a change.</summary>
+    /// <summary>The comment, style and text of the directive as read from a file: not a change.</summary>
     public void Read(string? comment, BlockStyle style, string? sourceText)
     {
         Comment = comment;
@@ -92,8 +93,8 @@ internal sealed class StructureDirective : StructureNode
         SourceText = sourceText;
     }
 
-    /// <summary>The style the block is written in now, e.g. after it was put onto lines to hold a block: not a change.</summary>
-    public void ReadStyle(BlockStyle style) => Style = style;
+    /// <summary>The style the block is written in now, e.g. after the tree put it onto lines to hold a block: not a change.</summary>
+    public void NoteWrittenStyle(BlockStyle style) => Style = style;
 
     /// <summary>Forgets what changed: the changes were taken.</summary>
     public void AcceptChanges()
@@ -114,7 +115,12 @@ internal sealed record BlockStyle(bool OneLine, bool BraceOnNewLine)
 
 internal enum DirectiveKind
 {
+    /// <summary>Ends with <c>;</c>, e.g. <c>listen 80;</c>.</summary>
     Simple,
+
+    /// <summary>A block of directives, e.g. <c>server { … }</c>.</summary>
     Block,
+
+    /// <summary>A block whose body is kept as text, not directives, e.g. <c>content_by_lua_block { … }</c>.</summary>
     Raw,
 }
