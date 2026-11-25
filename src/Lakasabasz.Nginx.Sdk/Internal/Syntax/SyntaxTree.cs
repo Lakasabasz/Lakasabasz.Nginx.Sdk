@@ -5,8 +5,9 @@ namespace Lakasabasz.Nginx.Sdk.Internal.Syntax;
 
 /// <summary>
 /// The syntax tree of one file: its lines as written, the formatting new text gets, and, through
-/// <see cref="SyntaxBinding"/>, the internal structure read from it. The file side gives it text and takes text back;
-/// it never sees the structure.
+/// <see cref="SyntaxBinding"/>, the internal structure read from it. The file side gives it text and takes text back,
+/// without seeing the structure; the facades reach the structure through it. Rendering first writes the changes of the
+/// structure into the lines.
 /// </summary>
 internal sealed class SyntaxTree
 {
@@ -53,7 +54,10 @@ internal sealed class SyntaxTree
         return text.ToString();
     }
 
-    /// <summary>The <c>include</c> directives of the file as read, at any depth: the files nginx loads with it.</summary>
+    /// <summary>
+    /// The <c>include</c> directives of the file as read, at any depth: the files nginx loads with it. Only an include
+    /// with one argument names a file; any other is a syntax nginx rejects, and is left out.
+    /// </summary>
     public IEnumerable<SyntaxDirective> Includes() => IncludesIn(Root);
 
     private static IEnumerable<SyntaxDirective> IncludesIn(SyntaxBlock block) => block.Lines

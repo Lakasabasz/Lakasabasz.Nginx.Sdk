@@ -56,20 +56,17 @@ internal sealed partial class SyntaxBlock
     /// <param name="ownerIndentation">The indentation of the block directive's line; <see langword="null"/> for the top level of a file.</param>
     /// <param name="holdsBlock">Whether a block is in this block already, so nothing goes on one line.</param>
     /// <param name="after">The node added just before in the same change: the new one goes after it, not after the last directive.</param>
-    public void Append(Func<string, bool, SyntaxNode> create, Formatting formatting, string? ownerIndentation, bool holdsBlock, SyntaxNode? after)
+    /// <returns>The node made by <paramref name="create"/>.</returns>
+    public SyntaxNode Append(Func<string, bool, SyntaxNode> create, Formatting formatting, string? ownerIndentation, bool holdsBlock, SyntaxNode? after)
     {
         if (ownerIndentation is not null && IsOneLine && !holdsBlock)
-        {
-            AppendOnLine(create(string.Empty, true));
-            return;
-        }
+            return AppendOnLine(create(string.Empty, true));
 
         if (ownerIndentation is not null && IsOneLine)
             Restyle(oneLine: false, formatting, ownerIndentation);
-        if (ownerIndentation is null && !Lines.Any(line => line.HasDirectives))
-            AppendToFile(create(string.Empty, false), formatting);
-        else
-            AppendLine(create, formatting, ownerIndentation ?? string.Empty, after);
+        return ownerIndentation is null && !Lines.Any(line => line.HasDirectives)
+            ? AppendToFile(create(string.Empty, false), formatting)
+            : AppendLine(create, formatting, ownerIndentation ?? string.Empty, after);
     }
 
     public string IndentationOf(SyntaxNode node) => LineOf(node).Indentation;
@@ -106,11 +103,11 @@ internal sealed partial class SyntaxBlock
             line.Ending = formatting.Newline;
             Lines.Insert(Lines.IndexOf(line) + 1, rest);
         }
-        EndLine(node, formatting, ownerIndentation);
+        BreakLineBeforeClosingBrace(node, formatting, ownerIndentation);
     }
 
     /// <summary>Ends the line of <paramref name="node"/> with a line break when <c>}</c> follows it on the line.</summary>
-    public void EndLine(SyntaxNode node, Formatting formatting, string? ownerIndentation)
+    public void BreakLineBeforeClosingBrace(SyntaxNode node, Formatting formatting, string? ownerIndentation)
     {
         var line = LineOf(node);
         if (ownerIndentation is null || line.Ending.Length > 0)
@@ -158,7 +155,7 @@ internal sealed partial class SyntaxBlock
 
     private SyntaxLine LineOf(SyntaxNode node) => Lines.First(line => line.Items.Any(item => item.Node == node));
 
-    private void AppendOnLine(SyntaxNode directive)
+    private SyntaxNode AppendOnLine(SyntaxNode directive)
     {
         if (Lines.Count == 0)
         {
@@ -167,29 +164,38 @@ internal sealed partial class SyntaxBlock
                 BeforeClosing = " ";
         }
         Lines[^1].Items.Add(new SyntaxItem(" ", directive));
+        return directive;
     }
 
-    private void AppendToFile(SyntaxNode directive, Formatting formatting)
+    private SyntaxNode AppendToFile(SyntaxNode directive, Formatting formatting)
     {
         if (Lines.Count > 0 && Lines[^1].Ending.Length == 0)
             Lines[^1].Ending = formatting.Newline;
         var line = new SyntaxLine { Ending = formatting.Newline };
         line.Items.Add(new SyntaxItem(string.Empty, directive));
         Lines.Add(line);
+        return directive;
     }
 
-    private void AppendLine(Func<string, bool, SyntaxNode> create, Formatting formatting, string ownerIndentation, SyntaxNode? after)
+    /// <summary>
+    /// A new line after <paramref name="after"/>, the last directive, or the last comment. When that line ends at the
+    /// block's <c>}</c> (no line break), the new line takes its place before the <c>}</c>: the old line gets the line
+    /// break and the new one none.
+    /// </summary>
+    private SyntaxNode AppendLine(Func<string, bool, SyntaxNode> create, Formatting formatting, string ownerIndentation, SyntaxNode? after)
     {
         var lastDirective = after is not null ? Lines.IndexOf(LineOf(after)) : Lines.FindLastIndex(line => line.HasDirectives);
         var last = lastDirective >= 0 ? lastDirective : Lines.FindLastIndex(line => line.Items.Count > 0);
         var indentation = lastDirective >= 0 ? Lines[last].Indentation : ownerIndentation + formatting.IndentUnit;
         var line = new SyntaxLine { Indentation = indentation, Ending = formatting.Newline };
-        line.Items.Add(new SyntaxItem(string.Empty, create(indentation, false)));
+        var node = create(indentation, false);
+        line.Items.Add(new SyntaxItem(string.Empty, node));
         if (last >= 0 && Lines[last].Ending.Length == 0)
         {
             Lines[last].Ending = formatting.Newline;
             line.Ending = string.Empty;
         }
         Lines.Insert(last + 1, line);
+        return node;
     }
 }

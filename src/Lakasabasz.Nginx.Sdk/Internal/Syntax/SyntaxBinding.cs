@@ -52,17 +52,17 @@ internal sealed class SyntaxBinding
             {
                 var item = line.Items[i].Node;
                 if (item is SyntaxComment standalone && (i == 0 || line.Items[i - 1].Node is not SyntaxDirective))
-                    nodes.Add(new StructureComment(TextOf(standalone)));
+                    nodes.Add(new StructureComment(CommentTextOf(standalone)));
                 if (item is not SyntaxDirective node)
                     continue;
 
-                var kind = node.Block is not null ? DirectiveKind.Block : node.Raw is not null ? DirectiveKind.Raw : DirectiveKind.Simple;
+                var kind = KindOf(node);
                 var nested = node.Block is { } inner ? new StructureBlock(NodesOf(inner, fromFile)) : null;
                 var directive = fromFile
                     ? new StructureDirective(node.Name, node.Arguments, kind, nested, node.Raw, node.Line, node.Column)
                     : new StructureDirective(node.Name, node.Arguments, kind, nested, node.Raw);
-                var comment = i + 1 < line.Items.Count && line.Items[i + 1].Node is SyntaxComment after ? TextOf(after) : null;
-                directive.Read(comment, StyleOf(node), fromFile ? TextOf(node) : null);
+                var comment = i + 1 < line.Items.Count && line.Items[i + 1].Node is SyntaxComment after ? CommentTextOf(after) : null;
+                directive.Read(comment, StyleOf(node), fromFile ? SourceTextOf(node) : null);
                 if (fromFile)
                     _nodes[directive] = node;
                 nodes.Add(directive);
@@ -85,7 +85,7 @@ internal sealed class SyntaxBinding
         }
 
         foreach (var directive in changes.CommentChanged)
-            block.SetTrailingComment(_nodes[directive], LineOf(directive.Comment), formatting, ownerIndentation);
+            block.SetTrailingComment(_nodes[directive], CommentAsWritten(directive.Comment), formatting, ownerIndentation);
 
         foreach (var directive in changes.StyleChanged)
         {
@@ -93,14 +93,14 @@ internal sealed class SyntaxBinding
             var indentation = block.IndentationOf(node);
             node.Header = node.Header.TrimEnd() + BraceSpacing(directive.Style, formatting, indentation);
             node.Block?.Restyle(directive.Style.OneLine, formatting, indentation);
-            KeepStyle(directive, node);
+            NoteUnfolded(directive, node);
         }
 
         foreach (var (directive, nested) in changes.Nested)
         {
             var node = _nodes[directive];
             Apply(node.Block!, nested, formatting, block.IndentationOf(node));
-            KeepStyle(directive, node);
+            NoteUnfolded(directive, node);
         }
 
         AddAll(block, changes.Added, formatting, ownerIndentation, block.HoldsBlock);
@@ -126,18 +126,18 @@ internal sealed class SyntaxBinding
     {
         if (added is StructureComment comment)
         {
-            var node = new SyntaxComment(LineOf(comment.Text)!);
+            var node = new SyntaxComment(CommentAsWritten(comment.Text)!);
             block.Append((_, _) => node, formatting, ownerIndentation, holdsBlock: true, previous);
-            block.EndLine(node, formatting, ownerIndentation);
+            block.BreakLineBeforeClosingBrace(node, formatting, ownerIndentation);
             return node;
         }
 
         var directive = (StructureDirective)added;
-        SyntaxDirective? created = null;
-        block.Append((indentation, oneLine) => created = Create(directive, formatting, indentation, oneLine), formatting, ownerIndentation, holdsBlock, previous);
+        var created = (SyntaxDirective)block.Append(
+            (indentation, oneLine) => Create(directive, formatting, indentation, oneLine), formatting, ownerIndentation, holdsBlock, previous);
         if (directive.Comment is not null)
-            block.SetTrailingComment(created!, LineOf(directive.Comment), formatting, ownerIndentation);
-        return created!;
+            block.SetTrailingComment(created, CommentAsWritten(directive.Comment), formatting, ownerIndentation);
+        return created;
     }
 
     /// <summary>The node of a new directive; a block gets its directives, on one line or on lines of their own.</summary>
@@ -157,7 +157,7 @@ internal sealed class SyntaxBinding
         _nodes[directive] = node;
         if (block is not null)
             AddAll(block, directive.Block.Nodes, formatting, blockOnOneLine ? string.Empty : indentation, holdsBlock: false);
-        KeepStyle(directive, node);
+        NoteUnfolded(directive, node);
         return node;
     }
 
@@ -165,7 +165,7 @@ internal sealed class SyntaxBinding
     /// The structure learns that its block is not on one line, when the block could not be or no longer is: one holding
     /// a block or a comment is written on lines.
     /// </summary>
-    private static void KeepStyle(StructureDirective directive, SyntaxDirective node)
+    private static void NoteUnfolded(StructureDirective directive, SyntaxDirective node)
     {
         if (directive.Style.OneLine && node.Block is { IsOneLine: false })
             directive.NoteWrittenStyle(directive.Style with { OneLine = false });
@@ -182,7 +182,7 @@ internal sealed class SyntaxBinding
     private static string HeaderOf(StructureDirective directive, string? braceSpacing)
     {
         var header = new StringBuilder();
-        ConfigWriter.AppendHeader(header, directive.Name, directive.Arguments, block: false);
+        ConfigWriter.AppendHeader(header, directive.Name, directive.Arguments);
         return header.Append(directive.IsBlock ? braceSpacing ?? " " : string.Empty).ToString();
     }
 
@@ -191,7 +191,7 @@ internal sealed class SyntaxBinding
     {
         if (node.Block is null)
             return null;
-        var spacing = node.Header.Substring(node.Header.TrimEnd().Length);
+        var spacing = BraceSpacingOf(node);
         return spacing.IndexOf('\n') >= 0 ? spacing : null;
     }
 
@@ -199,17 +199,28 @@ internal sealed class SyntaxBinding
         style.BraceOnNewLine ? formatting.Newline + indentation : " ";
 
     private static BlockStyle StyleOf(SyntaxDirective node) => node.Block is { } block
-        ? new BlockStyle(block.IsOneLine, node.Header.Substring(node.Header.TrimEnd().Length).IndexOf('\n') >= 0)
+        ? new BlockStyle(block.IsOneLine, BraceSpacingOf(node).IndexOf('\n') >= 0)
         : BlockStyle.Default;
 
+    private static DirectiveKind KindOf(SyntaxDirective node) => (node.Block, node.Raw) switch
+    {
+        (not null, _) => DirectiveKind.Block,
+        (_, not null) => DirectiveKind.Raw,
+        _ => DirectiveKind.Simple,
+    };
+
+    /// <summary>The spacing at the end of a block's header, before its <c>{</c>.</summary>
+    private static string BraceSpacingOf(SyntaxDirective node) => node.Header.Substring(node.Header.TrimEnd().Length);
+
     /// <summary>A comment's text without <c>#</c> and the space after it.</summary>
-    private static string TextOf(SyntaxComment comment)
+    private static string CommentTextOf(SyntaxComment comment)
     {
         var text = comment.Text.Substring(1);
         return text.StartsWith(" ", StringComparison.Ordinal) ? text.Substring(1) : text;
     }
 
-    private static string TextOf(SyntaxDirective node)
+    /// <summary>The directive as written in the file, with its block.</summary>
+    private static string SourceTextOf(SyntaxDirective node)
     {
         var text = new StringBuilder();
         node.Render(text);
@@ -217,7 +228,7 @@ internal sealed class SyntaxBinding
     }
 
     /// <summary>The comment as written: <c>#</c>, a space and the text.</summary>
-    private static string? LineOf(string? comment) => comment is null
+    private static string? CommentAsWritten(string? comment) => comment is null
         ? null
         : comment.Length == 0 ? CommentStart.ToString() : CommentStart + " " + comment;
 }
