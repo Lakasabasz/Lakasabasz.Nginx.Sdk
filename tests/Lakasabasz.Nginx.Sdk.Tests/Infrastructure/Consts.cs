@@ -456,6 +456,53 @@ public static class Consts
         public static string MainIncluding(string site) => $"events {{}}\nhttp {{\n    include {site};\n}}\n";
     }
 
+    public static class Values
+    {
+        public const string KeepAliveTimeout = "keepalive_timeout";
+        public const string Location = "location";
+        public const string Listen = "listen";
+        public const int DefaultPort = 80;
+
+        public static readonly string[] TimeTexts = ["65", "500ms", "90s", "2m", "3h", "2d", "1w", "1M", "1y", "1h30m", "1h 30m 15s"];
+        public static readonly TimeSpan?[] Times =
+        [
+            TimeSpan.FromSeconds(65), TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(90), TimeSpan.FromMinutes(2),
+            TimeSpan.FromHours(3), TimeSpan.FromDays(2), TimeSpan.FromDays(7), TimeSpan.FromDays(30), TimeSpan.FromDays(365),
+            TimeSpan.FromMinutes(90), new TimeSpan(1, 30, 15),
+        ];
+        public static readonly string[] NotTimes = ["x", "5q", "s", "1.5s", "-1s", "99999999999999999y"];
+        public static readonly TimeSpan[] TimesToWrite =
+            [TimeSpan.Zero, TimeSpan.FromSeconds(65), TimeSpan.FromMinutes(90) + TimeSpan.FromMilliseconds(250), TimeSpan.FromDays(30)];
+        public static readonly string[] WrittenTimes = ["0s", "1m5s", "1h30m250ms", "30d"];
+
+        public static readonly string[] SizeTexts = ["0", "512", "8k", "8K", "50m", "50M", "1g", "1G"];
+        public static readonly long[] SizeBytes = [0, 512, 8192, 8192, 52428800, 52428800, 1073741824, 1073741824];
+        public static readonly string[] NotSizes = ["", "k", "-1", "+1", "1.5m", "10x", "99999999999g"];
+        public static readonly Size[] SizesToWrite =
+            [Size.FromBytes(0), Size.FromBytes(1536), Size.FromKilobytes(1024), Size.FromMegabytes(50), Size.FromGigabytes(2)];
+        public static readonly string[] WrittenSizes = ["0", "1536", "1m", "50m", "2g"];
+
+        public static readonly string[][] LocationArguments =
+            [["/api"], ["=", "/exact"], ["=/glued"], ["^~/static/"], ["~*\\.png$"], ["~\\.php$"], ["~", "\\.js$"], ["@fallback"], ["="]];
+        public static readonly (LocationModifier, string)[] LocationKeys =
+        [
+            (LocationModifier.None, "/api"), (LocationModifier.Exact, "/exact"), (LocationModifier.Exact, "/glued"),
+            (LocationModifier.PreferPrefix, "/static/"), (LocationModifier.RegexIgnoreCase, "\\.png$"),
+            (LocationModifier.Regex, "\\.php$"), (LocationModifier.Regex, "\\.js$"), (LocationModifier.None, "@fallback"),
+            (LocationModifier.None, "="),
+        ];
+
+        public static readonly string[] FullListenArguments = ["127.0.0.1:443", "default", "ssl", "backlog=512", "http2", "ipv6only=off", "reuseport"];
+        public static readonly Listen FullListen = new()
+        {
+            Address = "127.0.0.1", Port = 443, DefaultServer = true, Ssl = true, Http2 = true, ReusePort = true, Ipv6Only = false,
+            Parameters = ["backlog=512"],
+        };
+        public static readonly string[] WrittenFullListen = ["127.0.0.1:443", "ssl", "http2", "default_server", "reuseport", "ipv6only=off", "backlog=512"];
+        public static readonly string[] Ipv6WithoutPortArguments = ["[::1]"];
+        public static readonly Listen Ipv6WithoutPort = new() { Address = "[::1]" };
+    }
+
     public static class Formats
     {
         public const string CompactGuid = "N";
