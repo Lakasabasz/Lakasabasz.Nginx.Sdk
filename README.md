@@ -55,17 +55,27 @@ profiles), generic directives for anything outside the official nginx directive 
 | `Nginx.Load(path, followIncludes)`, `nginx.Config.All`; `NginxParseException` listing every broken file | works |
 | Generic directives: `Directives.Add/Set/Remove/AddBlock` on files and blocks | works |
 | `Nginx.Discover`; `nginx.Config`: `Main`, `Default`, `SitesAvailable`, `ConfigDirectory`, `Snippets`, path indexer, `Load`, `Find`; `Create`/`TryGet`/`Delete` of files; `nginx.SitesEnabled` (changes kept in memory until committing exists) | works |
-| Sections and typed directives: fluent API, properties, lambdas, reusable objects, plain nginx text | planned |
+| Sections (`Http`, `Events`, `Server`, `Location`, `Upstream`, `Types`, `LimitExcept`): made in code or read from a file, `Add`/`Remove`/LINQ on their collections | works |
+| Properties for core HTTP, proxy, SSL and header directives (`null` removes); `Server.Names`, `Listens`, `Ports`, `SslPorts`, `IsDefault` | works |
+| Plain nginx text: `AddFromText` on every section collection | works |
+| Layout of new text (file: line break, indentation; block: one line, brace on a new line) and comments (own line, end of a line); raw access to any directive (`Directive.Text`) | works |
+| Fluent API, lambdas, reusable objects; typed properties for the rest of the official directive index | planned |
 | Committing changes (`GetChanges`, `Test`, `Apply`, `CommitChanges`); `nginx.Server`: `Version`, `Test()`, `Reload()` | planned |
 
 ```csharp
 var config = Nginx.Discover(sudo: true);         // nginx.conf with its includes, every site, conf.d, snippets
 var site = config.Config.SitesAvailable["reports"];
 config.SitesEnabled.Enable(site);               // only the link in sites-enabled; the content is the file
-var server = site.Directives.Single(d => d.Name == "server");
-server.Directives.Set("client_max_body_size", "50m");       // only this line changes
-server.Directives.AddBlock("location", "/api").Directives.Add("proxy_pass", "http://127.0.0.1:5000");
+var server = site.Servers.Single(s => s.Names.Contains("reports.example.com"));
+server.ClientMaxBodySize = Size.FromMegabytes(50);          // only this line changes
+server.Locations.Add("/api").ProxyPass = "http://127.0.0.1:5000";
+server.Locations.AddFromText("/static/", "root /var/www/reports;\nexpires 7d;");
+server.Directives.Set("more_set_headers", "Server: hidden"); // any directive, also of modules outside nginx
 ```
+
+The same server can be changed with properties, generic directives and nginx text in any order: they all change
+the same objects. The examples in `examples/` (`Examples.Properties`, `Examples.GenericDirectives`,
+`Examples.NginxText`, `Examples.LayoutAndComments`) do the same task in each style.
 
 `NginxEnvironment` defaults to a standard Debian/Ubuntu installation (`/usr/sbin/nginx`, `/etc/nginx`); give only what differs, e.g. `new NginxEnvironment(binary: "/opt/nginx/sbin/nginx")`.
 
