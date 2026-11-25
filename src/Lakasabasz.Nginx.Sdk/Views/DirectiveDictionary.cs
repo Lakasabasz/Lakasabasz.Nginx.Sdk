@@ -4,7 +4,8 @@ using Lakasabasz.Nginx.Sdk.Internal.Structure;
 namespace Lakasabasz.Nginx.Sdk.Views;
 
 /// <summary>
-/// Directives of a block read as entries of a dictionary, one directive per entry, e.g. <c>proxy_set_header Host
+/// Directives of a block read as entries of a dictionary, one directive per entry (<c>belongs</c> picks them,
+/// <c>read</c> gives the entry of one, <c>write</c> the directive of an entry), e.g. <c>proxy_set_header Host
 /// $host;</c> as the entry <c>Host</c> → <c>$host</c>. Read anew on each use.
 /// </summary>
 /// <remarks>
@@ -14,8 +15,7 @@ namespace Lakasabasz.Nginx.Sdk.Views;
 internal sealed class DirectiveDictionary<TValue>(
     StructureBlock block,
     Func<StructureDirective, bool> belongs,
-    Func<StructureDirective, string> keyOf,
-    Func<StructureDirective, TValue> valueOf,
+    Func<StructureDirective, KeyValuePair<string, TValue>> read,
     Func<string, TValue, (string Name, IReadOnlyList<string> Arguments)> write,
     StringComparer comparer) : IDictionary<string, TValue>
 {
@@ -23,7 +23,7 @@ internal sealed class DirectiveDictionary<TValue>(
 
     public bool IsReadOnly => false;
 
-    public ICollection<string> Keys => Directives.Select(keyOf).Distinct(comparer).ToList();
+    public ICollection<string> Keys => Directives.Select(directive => read(directive).Key).Distinct(comparer).ToList();
 
     public ICollection<TValue> Values => Keys.Select(key => this[key]).ToList();
 
@@ -75,7 +75,7 @@ internal sealed class DirectiveDictionary<TValue>(
     {
         if (With(key).FirstOrDefault() is { } directive)
         {
-            value = valueOf(directive);
+            value = read(directive).Value;
             return true;
         }
 
@@ -94,7 +94,7 @@ internal sealed class DirectiveDictionary<TValue>(
     private List<KeyValuePair<string, TValue>> Entries() =>
         Keys.Select(key => new KeyValuePair<string, TValue>(key, this[key])).ToList();
 
-    private List<StructureDirective> With(string key) => Directives.Where(directive => comparer.Equals(keyOf(directive), key)).ToList();
+    private List<StructureDirective> With(string key) => Directives.Where(directive => comparer.Equals(read(directive).Key, key)).ToList();
 
     private void RemoveAll(IEnumerable<StructureDirective> directives)
     {

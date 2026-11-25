@@ -19,12 +19,19 @@ public sealed class Types : Section
     {
     }
 
-    /// <summary>The extensions of each content type, e.g. <c>MimeTypes["text/html"] = ["html", "htm"]</c>.</summary>
-    public IDictionary<string, IReadOnlyList<string>> MimeTypes => new DirectiveDictionary<IReadOnlyList<string>>(
-        Block,
-        _ => true,
-        directive => directive.Name,
-        directive => directive.Arguments,
-        (type, extensions) => (type, extensions),
-        StringComparer.OrdinalIgnoreCase);
+    /// <summary>
+    /// The extensions of each content type, by the type (case-insensitive, as nginx compares them), e.g.
+    /// <c>MimeTypes["text/html"] = ["html", "htm"]</c>.
+    /// </summary>
+    public IDictionary<string, IReadOnlyList<string>> MimeTypes =>
+        new DirectiveDictionary<IReadOnlyList<string>>(Block, IsMimeType, ReadMimeType, WriteMimeType, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Every directive of a <c>types</c> block is a content type: its name is the type, its arguments the extensions.</summary>
+    private static bool IsMimeType(StructureDirective directive) => true;
+
+    private static KeyValuePair<string, IReadOnlyList<string>> ReadMimeType(StructureDirective directive) =>
+        new(directive.Name, directive.Arguments);
+
+    private static (string Name, IReadOnlyList<string> Arguments) WriteMimeType(string type, IReadOnlyList<string> extensions) =>
+        (type, extensions);
 }

@@ -27,13 +27,8 @@ public sealed class ProxySettings
     /// The request headers passed to the proxied server (<c>proxy_set_header</c>), by name (case-insensitive), e.g.
     /// <c>Headers["Host"] = "$host"</c>.
     /// </summary>
-    public IDictionary<string, string> Headers => new DirectiveDictionary<string>(
-        _block,
-        directive => directive.Name == SetHeaderName,
-        directive => directive.Arguments.Count == 2 ? directive.Arguments[0] : throw DirectiveValues.NotA(directive, "a header and its value"),
-        directive => directive.Arguments[1],
-        (name, value) => (SetHeaderName, [name, value]),
-        StringComparer.OrdinalIgnoreCase);
+    public IDictionary<string, string> Headers =>
+        new DirectiveDictionary<string>(_block, IsSetHeader, ReadHeader, WriteHeader, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>How long connecting to the proxied server may take (<c>proxy_connect_timeout</c>).</summary>
     public TimeSpan? ConnectTimeout
@@ -69,4 +64,13 @@ public sealed class ProxySettings
         get => DirectiveValues.GetSwitch(_block, BufferingName);
         set => DirectiveValues.SetSwitch(_block, BufferingName, value);
     }
+
+    private static bool IsSetHeader(StructureDirective directive) => directive.Name == SetHeaderName;
+
+    /// <summary><c>proxy_set_header Host $host;</c> as <c>Host</c> → <c>$host</c>.</summary>
+    private static KeyValuePair<string, string> ReadHeader(StructureDirective directive) => directive.Arguments is [var name, var value]
+        ? new KeyValuePair<string, string>(name, value)
+        : throw DirectiveValues.NotA(directive, "a header and its value");
+
+    private static (string Name, IReadOnlyList<string> Arguments) WriteHeader(string name, string value) => (SetHeaderName, [name, value]);
 }
